@@ -1,0 +1,15 @@
+[submodule "git-auto-commit-action"]
+	path = git-auto-commit-action
+	url = https://github.com/Keyfactor/git-auto-commit-action
+[submodule "add-and-commit"]
+	path = add-and-commit
+	url = https://github.com/Keyfactor/add-and-commit
+[submodule "delete-tag-and-release"]
+	path = delete-tag-and-release
+	url = https://github.com/Keyfactor/delete-tag-and-release
+[submodule "action-create-release"]
+	path = action-create-release
+	url = https://github.com/Keyfactor/action-create-release
+[submodule "jinja2-action"]
+	path = jinja2-action
+	url = https://github.com/Keyfactor/jinja2-action
