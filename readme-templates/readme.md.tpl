@@ -7,5 +7,5 @@
 {{ descriptions[integration_type] }}
 
 ---
-{# the README_SOURCE should be the general README content in markdown form #}
-{{ env['README_SOURCE'] }}
+{# the readme_source.md file should be the general README content in markdown form #}
+{% include "readme_source.md" %}
