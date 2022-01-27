@@ -2,9 +2,10 @@
 
 {{ description }}
 
-## About the Keyfactor {{ integration_type }}
+## About the Keyfactor {{ display_names[integration_type] }}
 
-{# generic description goes here #}
+{{ descriptions[integration_type] }}
 
 ---
 {# the readme_source.md file should be the general README content in markdown form #}
+{% include "readme_source.md" %}
