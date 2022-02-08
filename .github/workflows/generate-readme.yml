@@ -5,7 +5,9 @@ jobs:
   update_readme:
     runs-on: ubuntu-latest
 
-    steps: 
+    steps:
+      - uses: actions/checkout@v2
+
       - uses: actions/checkout@v2
         with:
           repository: 'Keyfactor/actions'
