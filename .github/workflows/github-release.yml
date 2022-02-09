@@ -1,0 +1,71 @@
+name: Create GitHub release version and location
+on:
+  workflow_call:
+    outputs:
+      release_version:
+        description: The computed release version for the release (or pre-release) being built
+        value: ${{ jobs.create-github-release.outputs.release_version }}
+      upload_url:
+        description: The upload URL for build artifacts for this release
+        value: ${{ jobs.create-github-release.outputs.release_url }}
+
+jobs:
+  create-github-release:
+    runs-on: windows-latest
+    outputs:
+      release_version: ${{ steps.create_release.outputs.current_tag }}
+      release_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Get release values from workflow state
+        run: |
+            $repoName = "${{ github.repository }}".Split("/")
+            echo "Repo Name: $($repoName[-1])"
+            echo "REPO_NAME=$($repoName[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+            $relVersion = "${{ github.base_ref }}".Split("-")
+            echo "Release Version: $($relVersion[-1])"
+            echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: GitHub Script checks for existing version tags
+        id: existing_version
+        uses: actions/github-script@v4.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
+        with:
+          script: |
+            // check for existing tags on this major.minor version
+            const tagsList = await github.git.listMatchingRefs({
+             owner: context.repo.owner,
+             repo: context.repo.repo,
+             ref: 'tags'
+            });
+            
+            const { VERSION_NUMBER } = process.env;
+            const tags = tagsList.data.reverse();
+            
+            // assume linear release pattern - i.e. always working on latest major.minor version
+            // if there are no tags, or latest tag does not start with VERSION_NUMBER, set a manual version for release
+            if (tags.length < 1
+                || !tags.shift().ref.startsWith(`refs/tags/${VERSION_NUMBER}`)) {
+              core.exportVariable('MANUAL_VERSION', `${VERSION_NUMBER}.0-rc.0`);
+            }
+            
+      # Create a new release to auto-increment (or use manual version number)
+      - name: Create new release
+        id: create_release
+        uses: keyfactor/action-create-release@786b73035fa09790f9eb11bb86834a6d7af1c256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
+        with:
+          release_name: Release Candidate ${{ env.REPO_NAME }} ${{ env.RELEASE_VERSION }} 
+          body: |
+            [Changelog](../CHANGELOG.MD)
+          draft: false
+          prerelease: true
+          prerelease_suffix: rc
+          tag_name: ${{ env.MANUAL_VERSION }}
+          auto_increment_type: prerelease
+          tag_schema: semantic
+          commitish: ${{ github.sha }}
