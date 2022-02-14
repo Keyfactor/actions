@@ -1,8 +1,8 @@
-name: Update README
+name: Generate README from templates and data files
 on: [workflow_call]
 
 jobs:
-  update_readme:
+  generate-readme:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,14 +21,14 @@ jobs:
             integration-manifest.json
             ./actions/readme-templates/readme_shared_data.json
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Show generated README.md
         run: echo $(cat README.md)
         
       - uses: Keyfactor/add-and-commit@v7.5.0
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           add: README.md --force
           message: Update generated README
