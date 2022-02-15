@@ -16,6 +16,7 @@ jobs:
       release_version: ${{ steps.create_release.outputs.current_tag }}
       release_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      # determines values of repo name and major.minor release version from branch, and if build should be Release or Pre-Release
       - name: Get release values from workflow state
         run: |
             $repoName = "${{ github.repository }}".Split("/")
@@ -26,12 +27,30 @@ jobs:
             echo "Release Version: $($relVersion[-1])"
             echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
+            $isPreRelease = "${{ github.ref_name }}".StartsWith("release-") -and "${{ github.event.action == 'opened' || github.event.action == 'synchronized' }}""
+            echo "Pre-release flagged: $($isPreRelease)"
+            echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+            $isRelease = "${{ github.ref_name }}".StartsWith("release-") -and "${{ github.event.action == 'closed' && github.event.pull_request.merged == true }}"
+            echo "Release flagged: $($isRelease)"
+            echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # fail job if action state / trigger does not correspond to a Pre-Release or Release
+      - name: Valid release trigger check
+        uses: actions/github-script@v4.0.2
+        if: ${{ !(env.IS_PRE_RELEASE || env.IS_RELEASE) }}
+        with:
+          script: |
+            core.setFailed('Trigger for action did not match expectations for Pre-Release or Release');
+
+      # checks if pre-release patch version can be determined from existing release tags or if we start at 0
       - name: GitHub Script checks for existing version tags
         id: existing_version
         uses: actions/github-script@v4.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
+        if: env.IS_PRE_RELEASE && success()
         with:
           script: |
             // check for existing tags on this major.minor version
@@ -58,14 +77,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
+        if: success()
         with:
-          release_name: Release Candidate ${{ env.REPO_NAME }} ${{ env.RELEASE_VERSION }} 
+          release_name: ${{ env.RELEASE_VERSION }}
           body: |
             [Changelog](../CHANGELOG.MD)
           draft: false
-          prerelease: true
+          prerelease: ${{ env.IS_PRE_RELEASE }}
           prerelease_suffix: rc
           tag_name: ${{ env.MANUAL_VERSION }}
-          auto_increment_type: prerelease
+          auto_increment_type: ${{ env.IS_PRE_RELEASE && 'prerelease' || 'patch' }}
           tag_schema: semantic
           commitish: ${{ github.sha }}
