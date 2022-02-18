@@ -49,7 +49,7 @@ jobs:
             nuget restore $slnPath
 
       - name: Increment Assembly Version
-        if: env.CREATE_RELEASE
+        if: env.CREATE_RELEASE == 'True'
         run: |
             $VersionRegex = "\d+\.\d+\.\d+"
             $assemblyInfoFiles = (Get-ChildItem -Include AssemblyInfo.cs -File -Recurse).fullname
@@ -71,7 +71,7 @@ jobs:
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
       
       - name: Archive Files
-        if: success() && env.CREATE_RELEASE
+        if: success() && env.CREATE_RELEASE == 'True'
         run: |
            md ${{ github.workspace }}\zip\Keyfactor
            Compress-Archive -Path `
@@ -79,7 +79,7 @@ jobs:
            -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME.zip -Force
 
       - name: Upload Release Asset (x64)
-        if: success() && env.CREATE_RELEASE
+        if: success() && env.CREATE_RELEASE == 'True'
         id: upload-release-asset-x64
         uses: actions/upload-release-asset@v1
         env:

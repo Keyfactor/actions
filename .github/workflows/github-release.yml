@@ -38,7 +38,7 @@ jobs:
       # fail job if action state / trigger does not correspond to a Pre-Release or Release
       - name: Valid release trigger check
         uses: actions/github-script@v4.0.2
-        if: ${{ !(env.IS_PRE_RELEASE || env.IS_RELEASE) }}
+        if: ${{ !(env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True') }}
         with:
           script: |
             core.setFailed('Trigger for action did not match expectations for Pre-Release or Release');
@@ -50,7 +50,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
-        if: env.IS_PRE_RELEASE && success()
+        if: env.IS_PRE_RELEASE == 'True' && success()
         with:
           script: |
             // check for existing tags on this major.minor version
