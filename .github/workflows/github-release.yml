@@ -73,7 +73,7 @@ jobs:
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
-        uses: keyfactor/action-create-release@786b73035fa09790f9eb11bb86834a6d7af1c256
+        uses: keyfactor/action-create-release@23adaa24d5d6cf1f8bad021bfed874676dd870d0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
@@ -86,6 +86,6 @@ jobs:
           prerelease: ${{ env.IS_PRE_RELEASE == 'True' }}
           prerelease_suffix: rc
           tag_name: ${{ env.MANUAL_VERSION }}
-          auto_increment_type: ${{ (env.IS_PRE_RELEASE == 'True') && 'prerelease' || 'patch' }}
+          auto_increment_type: ${{ (env.IS_PRE_RELEASE == 'True') && 'prepatch' || 'patch' }}
           tag_schema: semantic
           commitish: ${{ github.sha }}
