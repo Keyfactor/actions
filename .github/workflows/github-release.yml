@@ -83,9 +83,9 @@ jobs:
           body: |
             [Changelog](../CHANGELOG.MD)
           draft: false
-          prerelease: ${{ env.IS_PRE_RELEASE }}
+          prerelease: ${{ env.IS_PRE_RELEASE == 'True' }}
           prerelease_suffix: rc
           tag_name: ${{ env.MANUAL_VERSION }}
-          auto_increment_type: ${{ env.IS_PRE_RELEASE && 'prerelease' || 'patch' }}
+          auto_increment_type: ${{ (env.IS_PRE_RELEASE == 'True') && 'prerelease' || 'patch' }}
           tag_schema: semantic
           commitish: ${{ github.sha }}
