@@ -73,7 +73,7 @@ jobs:
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
-        uses: keyfactor/action-create-release@23adaa24d5d6cf1f8bad021bfed874676dd870d0
+        uses: keyfactor/action-create-release@b57fea317a67e7b20203904e85b9f78500b1a489
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
