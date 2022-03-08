@@ -5,7 +5,7 @@ on:
       release_version:
         description: The computed release version for the release (or pre-release) being built
         value: ${{ jobs.create-github-release.outputs.release_version }}
-      upload_url:
+      release_url:
         description: The upload URL for build artifacts for this release
         value: ${{ jobs.create-github-release.outputs.release_url }}
 
@@ -14,9 +14,9 @@ jobs:
     runs-on: windows-latest
     outputs:
       release_version: ${{ steps.create_release.outputs.current_tag }}
-      release_url: ${{ steps.create_release.outputs.upload_url }}
+      release_url: ${{ steps.create_release.outputs.release_url }}
     steps:
-      # determines values of repo name and major.minor release version from branch, and if build should be Release or Pre-Release
+      # determines values of repo name and major.minor release version from branch, and if build should be Releasor Pre-Release
       - name: Get release values from workflow state
         run: |
             $repoName = "${{ github.repository }}".Split("/")
@@ -27,11 +27,11 @@ jobs:
             echo "Release Version: $($relVersion[-1])"
             echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and "${{ github.event.action == 'opened' || github.event.action == 'synchronized' }}"
+            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event.action == 'opened' || github.event.action == 'synchronized' }}")
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and "${{ github.event.action == 'closed' && github.event.pull_request.merged == true }}"
+            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event.action == 'closed' && github.event.pull_request.merged == true }}")
             echo "Release flagged: $($isRelease)"
             echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
@@ -73,7 +73,7 @@ jobs:
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
-        uses: keyfactor/action-create-release@23adaa24d5d6cf1f8bad021bfed874676dd870d0
+        uses: keyfactor/action-create-release@b57fea317a67e7b20203904e85b9f78500b1a489
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
