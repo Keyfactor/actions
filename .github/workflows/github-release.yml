@@ -27,7 +27,7 @@ jobs:
             echo "Release Version: $($relVersion[-1])"
             echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronized') }}")
+            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}")
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
