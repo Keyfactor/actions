@@ -46,9 +46,9 @@ jobs:
             console.log('Cancelling release workflow, trigger status does not reflect releasing state...');
             await github.actions.cancelWorkflowRun({ owner, repo, run_id });
 
-    - name: Waiting for potential cancellation
-      if: ${{ !(env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True') }}
-      run: sleep 30
+      - name: Waiting for potential cancellation
+        if: ${{ !(env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True') }}
+        run: sleep 30
 
       # checks if pre-release patch version can be determined from existing release tags or if we start at 0
       - name: GitHub Script checks for existing version tags
