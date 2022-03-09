@@ -33,7 +33,7 @@ jobs:
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'push' }}")
+            $isRelease = "${{ github.ref_name }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'push' }}")
             echo "Release flagged: $($isRelease)"
             echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
