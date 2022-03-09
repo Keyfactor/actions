@@ -1,5 +1,10 @@
 name: Update Keyfactor Integrations Catalog Entry
-on: [workflow_call]
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
 
 jobs:
   update-catalog-entry:
@@ -10,7 +15,7 @@ jobs:
       
       - uses: actions/checkout@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.token }}
           path: './catalog-temp/'
           repository: 'Keyfactor/integrations-catalog'
       
@@ -22,7 +27,7 @@ jobs:
           variables: |
             repository= ${{ format('https://github.com/{0}', github.repository) }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.token }}
         
       - uses: Keyfactor/add-and-commit@v7.5.0
         with:
