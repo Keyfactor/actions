@@ -27,28 +27,13 @@ jobs:
             echo "Release Version: $($relVersion[-1])"
             echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event.action == 'opened' || github.event.action == 'synchronized' }}")
+            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronized') }}")
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event.action == 'closed' && github.event.pull_request.merged == true }}")
+            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}")
             echo "Release flagged: $($isRelease)"
             echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
-      # fail job if action state / trigger does not correspond to a Pre-Release or Release
-      - name: Valid release trigger check
-        uses: actions/github-script@v4.0.2
-        if: ${{ !(env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True') }}
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const run_id = "${{ github.run_id }}";
-            console.log('Cancelling release workflow, trigger status does not reflect releasing state...');
-            await github.actions.cancelWorkflowRun({ owner, repo, run_id });
-
-      - name: Waiting for potential cancellation
-        if: ${{ !(env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True') }}
-        run: sleep 30
 
       # checks if pre-release patch version can be determined from existing release tags or if we start at 0
       - name: GitHub Script checks for existing version tags
@@ -57,7 +42,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
-        if: env.IS_PRE_RELEASE == 'True' && success()
+        if: env.IS_PRE_RELEASE == 'True'
         with:
           script: |
             // check for existing tags on this major.minor version
@@ -84,7 +69,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
-        if: success()
+        if: env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True'
         with:
           release_name: ${{ env.RELEASE_VERSION }}
           body: |
