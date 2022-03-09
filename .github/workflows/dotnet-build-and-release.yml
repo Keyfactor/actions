@@ -55,7 +55,7 @@ jobs:
             $assemblyInfoFiles = (Get-ChildItem -Include AssemblyInfo.cs -File -Recurse).fullname
             if ($assemblyInfoFiles -ne $null)
             {
-              $newVer = "${{ inputs.release_version }}".TrimStart('v').Split('-')[0]
+              $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
               echo "Prepared to overwrite Assembly version to: ${newVer}"
               foreach ($assemblyInfoFile in $assemblyInfoFiles)
               {
@@ -67,7 +67,7 @@ jobs:
 
       - name: Execute MSBuild Commands
         run: |
-          $newVer = "${{ inputs.release_version }}".TrimStart('v').Split('-')[0]
+          $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
       
       - name: Archive Files
