@@ -17,6 +17,8 @@ jobs:
       release_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       # determines values of repo name and major.minor release version from branch, and if build should be Releasor Pre-Release
+      # full release is run on on Push to a release- branch, and requires that branch protection prevent regular pushes from triggering a release
+      # there is no clear way to capture the 'pull_request' action closing with a merge when the calling workflow has a check for 'push' - the push of the merge is captured and not the pull_request closing
       - name: Get release values from workflow state
         run: |
             $repoName = "${{ github.repository }}".Split("/")
@@ -31,7 +33,7 @@ jobs:
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}")
+            $isRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'push' }}")
             echo "Release flagged: $($isRelease)"
             echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
