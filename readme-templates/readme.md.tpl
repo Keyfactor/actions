@@ -2,9 +2,9 @@
 
 {{ description }}
 
-## About the Keyfactor {{ shared.display_names[integration_type] }}
+#### Integration status: {{ shared.integration_status[status] }}
 
-### Integration status: {{ shared.integration_status[status] }}
+## About the Keyfactor {{ shared.display_names[integration_type] }}
 
 {{ shared.descriptions[integration_type] }}
 
