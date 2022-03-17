@@ -4,6 +4,8 @@
 
 ## About the Keyfactor {{ shared.display_names[integration_type] }}
 
+### Integration status: {{ shared.integration_status[status] }}
+
 {{ shared.descriptions[integration_type] }}
 
 ---
