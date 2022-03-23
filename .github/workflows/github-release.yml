@@ -70,7 +70,7 @@ jobs:
         with:
           script: |
             // get all pull requests for this repo
-            const pulls = await github.rest.pulls.list({
+            const pulls = await github.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed'
