@@ -72,9 +72,18 @@ jobs:
             // get all pull requests for this repo
             const pulls = await github.pulls.list({
               owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed'
+              repo: context.repo.repo
             });
+
+            console.log(pulls);
+
+            const pulls2 = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all'
+            });
+
+            console.log(pulls2);
 
             // get the state of the latest pull request for this repo
             const state = pulls[0].state;
