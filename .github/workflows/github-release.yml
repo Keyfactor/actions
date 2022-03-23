@@ -72,22 +72,13 @@ jobs:
             // get all pull requests for this repo
             const pulls = await github.pulls.list({
               owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-
-            console.log(pulls);
-
-            const pulls2 = await github.pulls.list({
-              owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'all'
+              state: 'closed'
             });
-
-            console.log(pulls2);
 
             // get the state of the latest pull request for this repo
-            const state = pulls[0].state;
-            const mergeSHA = pulls[0].merge_commit_sha;
+            const state = pulls.data[0].state;
+            const mergeSHA = pulls.data[0].merge_commit_sha;
 
             const IS_RELEASE = (state == 'closed') && (mergSHA == github.sha);
 
