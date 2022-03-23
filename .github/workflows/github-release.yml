@@ -84,7 +84,7 @@ jobs:
 
             console.log(`State: ${state}`);
             console.log(`mergeSHA: ${mergeSHA}`);
-            console.log(`pushSHA: ${github.SHA}`);
+            console.log(`pushSHA: ${github.sha}`);
             console.log(`IS_RELEASE: ${IS_RELEASE}`);
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
