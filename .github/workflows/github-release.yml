@@ -82,6 +82,11 @@ jobs:
 
             const IS_RELEASE = (state == 'closed') && (mergeSHA == github.sha);
 
+            console.log(`State: ${state}`);
+            console.log(`mergeSHA: ${mergeSHA}`);
+            console.log(`pushSHA: ${github.SHA}`);
+            console.log(`IS_RELEASE: ${IS_RELEASE}`);
+
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
 
       # Create a new release to auto-increment (or use manual version number)
