@@ -33,10 +33,6 @@ jobs:
             echo "Pre-release flagged: $($isPreRelease)"
             echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            $isRelease = "${{ github.ref_name }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'push' }}")
-            echo "Release flagged: $($isRelease)"
-            echo "IS_RELEASE=$($isRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
       # checks if pre-release patch version can be determined from existing release tags or if we start at 0
       - name: GitHub Script checks for existing version tags
         id: existing_version
@@ -64,6 +60,35 @@ jobs:
               core.exportVariable('MANUAL_VERSION', `${VERSION_NUMBER}.0-rc.0`);
             }
             
+      # if not a pre release, check if there is a pull request that has closed + merged with the commit SHA of this push
+      - name: GitHub Script checks for merged pull request
+        id: merged_pull_request
+        uses: actions/github-script@v4.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'push'
+        with:
+          script: |
+            // get all pull requests for this repo
+            const pulls = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            });
+
+            // get the state of the latest pull request for this repo
+            const state = pulls.data[0].state;
+            const mergeSHA = pulls.data[0].merge_commit_sha;
+
+            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha);
+
+            console.log(`State: ${state}`);
+            console.log(`mergeSHA: ${mergeSHA}`);
+            console.log(`pushSHA: ${context.sha}`);
+            console.log(`IS_RELEASE: ${IS_RELEASE}`);
+
+            core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
+
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
@@ -71,7 +96,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
-        if: env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'True'
+        if: env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'true'
         with:
           release_name: ${{ env.RELEASE_VERSION }}
           body: |
