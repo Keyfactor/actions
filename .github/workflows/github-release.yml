@@ -80,11 +80,11 @@ jobs:
             const state = pulls.data[0].state;
             const mergeSHA = pulls.data[0].merge_commit_sha;
 
-            const IS_RELEASE = (state == 'closed') && (mergeSHA == github.sha);
+            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha);
 
             console.log(`State: ${state}`);
             console.log(`mergeSHA: ${mergeSHA}`);
-            console.log(`pushSHA: ${github.sha}`);
+            console.log(`pushSHA: ${context.sha}`);
             console.log(`IS_RELEASE: ${IS_RELEASE}`);
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
