@@ -9,13 +9,9 @@
 {{ shared.descriptions[integration_type] }}
 
 ---
-## integration_type = {{ integration_type }} <!-- This correctly prints integration_type = pam -->
+## integration_type = {{ integration_type }}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
-<!-- {% if {{ integration_type }} == "pam" %}  ## This does not work -->
-	<!-- {% if integration_type == "pam" %} // Fail?? -->
-<!-- {% if { integration_type } == "pam" %} // Fail -->
-{% if "pam" == "pam" %} <!-- This works -->
-	# Additional {{ integration_type }} readme template information should go in here <!-- Variable substitution works in this instamce -->
-	<!-- {% include "./actions/readme-templates/readme_pam.md" %} Failed with include-->
+{% if "pam" == "pam" %}
+	## Additional {{ integration_type }} readme template information should go in here
 {% endif %}
