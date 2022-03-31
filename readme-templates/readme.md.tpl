@@ -16,6 +16,6 @@
 	<!-- {% if integration_type == "pam" %} // Fail?? -->
 <!-- {% if { integration_type } == "pam" %} // Fail -->
 {% if "pam" == "pam" %} <!-- This works -->
-	<!-- ## Additional {{ integration_type }} readme template information should go in here <!-- Variable substitution works in this instamce -->
-	{% include "./actions/readme-templates/readme_pam.md" %}
+	# Additional {{ integration_type }} readme template information should go in here <!-- Variable substitution works in this instamce -->
+	<!-- {% include "./actions/readme-templates/readme_pam.md" %} Failed with include-->
 {% endif %}
