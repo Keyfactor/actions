@@ -12,6 +12,6 @@
 ## integration_type = {{ integration_type }}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
-{% if "pam" == "pam" %}
+{% if {{ integration_type }} == "pam" %}
 	## Additional {{ integration_type }} readme template information should go in here
 {% endif %}
