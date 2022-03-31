@@ -17,5 +17,5 @@
 <!-- {% if { integration_type } == "pam" %} // Fail -->
 {% if "pam" == "pam" %} <!-- This works -->
 	<!-- ## Additional {{ integration_type }} readme template information should go in here <!-- Variable substitution works in this instamce -->
-	{% include "./actions/readme_pam.md" %}
+	{% include "./actions/readme-templates/readme_pam.md" %}
 {% endif %}
