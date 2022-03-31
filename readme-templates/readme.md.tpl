@@ -12,3 +12,4 @@
 ## Test-String
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
+{% include "./actions/readme-templates/readme_pam.md" %}
