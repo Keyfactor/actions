@@ -13,5 +13,5 @@
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
 {% if "pam" == "pam" %}
-	## Additional  - {{ integration_type }} -  readme template information should go in here
+	## Additional {{ integration_type }} readme template information should go in here
 {% endif %}
