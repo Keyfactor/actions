@@ -9,7 +9,7 @@
 {{ shared.descriptions[integration_type] }}
 
 ---
-## Test-String
+## integration_type = {{ integration_type }}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
 {% include "./actions/readme-templates/readme_pam.md" %}
