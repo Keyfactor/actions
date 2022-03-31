@@ -14,7 +14,7 @@
 {% include "readme_source.md" %}
 <!-- {% if {{ integration_type }} == "pam" %}  ## This does not work -->
 	 <!-- {% if "pam" == "pam" %} // This works -->
-	<!-- {% if { integration_type } == "pam" %} // Fail?? -->
-{% if integration_type == "pam" %}
+	<!-- {% if integration_type == "pam" %} // Fail?? -->
+{% if { integration_type } == "pam" %}
 	## Additional {{ integration_type }} readme template information should go in here <!-- Variable substitution works in this instamce -->
 {% endif %}
