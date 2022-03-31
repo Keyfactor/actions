@@ -14,5 +14,5 @@
 {% include "readme_source.md" %}
 {% if "pam" == "pam" %}
 	## Additional {{ integration_type }} readme template information should go in here
-	{% include "./actions/readme-templates/readme_pam.md" }
+	{% include "./actions/readme-templates/readme_pam.md" %}
 {% endif %}
