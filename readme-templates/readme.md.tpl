@@ -14,11 +14,11 @@
 {% include "readme_source.md" %}
 
 {% if integration_type == "pam" %}
-	## Additional {{ integration_type }} readme template information should go in here
+## Additional {{ integration_type }} readme template information should go in here
 	{% include "./actions/readme-templates/readme_pam2.tpl" ignore missing %}
-	{% include "./actions/readme-templates/readme_pam.tpl" ignore missing %}
+{% include "./actions/readme-templates/readme_pam.tpl" ignore missing %}
 {% endif %}
 {% if integration_type == "orchestrator" %}
-	## Additional {{ integration_type }} readme template information should go in here
-	{% include "./actions/readme-templates/readme_orchestrator.tpl" ignore missing %}
+## Additional {{ integration_type }} readme template information should go in here
+{% include "./actions/readme-templates/readme_orchestrator.tpl" ignore missing %}
 {% endif %}
