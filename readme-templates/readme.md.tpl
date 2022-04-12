@@ -18,7 +18,7 @@
 	{% include "./actions/readme-templates/readme_pam2.md" ignore missing %}
 	{% include "./actions/readme-templates/readme_pam.md" ignore missing %}
 {% endif %}
-{% if {{ integration_type }} == "orchestrator" %}
+{% if "{{ integration_type }}" == "orchestrator" %}
 	## Additional {{ integration_type }} readme template information should go in here
 	{% include "./actions/readme-templates/readme_orchestrator.md" ignore missing %}
 {% endif %}
