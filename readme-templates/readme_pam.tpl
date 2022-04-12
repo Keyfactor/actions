@@ -1,1 +1,1 @@
-# PAM type template file
+### PAM type template file

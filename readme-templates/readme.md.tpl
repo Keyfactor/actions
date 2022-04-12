@@ -15,10 +15,10 @@
 {# This section does not evaluate correctly #}
 {% if integration_type == "pam" %}
 	## Additional {{ integration_type }} readme template information should go in here
-	{% include "./actions/readme-templates/readme_pam2.md" ignore missing %}
-	{% include "./actions/readme-templates/readme_pam.md" ignore missing %}
+	{% include "./actions/readme-templates/readme_pam2.tpl" ignore missing %}
+	{% include "./actions/readme-templates/readme_pam.tpl" ignore missing %}
 {% endif %}
 {% if integration_type == "orchestrator" %}
 	## Additional {{ integration_type }} readme template information should go in here
-	{% include "./actions/readme-templates/readme_orchestrator.md" ignore missing %}
+	{% include "./actions/readme-templates/readme_orchestrator.tpl" ignore missing %}
 {% endif %}
