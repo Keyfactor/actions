@@ -17,7 +17,7 @@ on:
         type: string
     secrets:
       token:
-        description: 'Secret token from caller workflow to access private repo'
+        description: 'Secret token from caller workflow to access private packages'
         required: true
 
 
