@@ -10,7 +10,7 @@ jobs:
 
       - uses: actions/checkout@v2
         with:
-          repository: 'fiddlermikey/actions'
+          repository: 'Keyfactor/actions'
           path: './actions/'
 
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
