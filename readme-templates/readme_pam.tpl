@@ -1,1 +1,0 @@
-### PAM type template file
