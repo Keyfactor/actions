@@ -79,14 +79,11 @@ jobs:
             // get the state of the latest pull request for this repo
             const state = pulls.data[0].state;
             const mergeSHA = pulls.data[0].merge_commit_sha;
-            const targetBranchName = pulls.data[0].base.ref;
-
-            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-');
+            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha);
 
             console.log(`State: ${state}`);
             console.log(`mergeSHA: ${mergeSHA}`);
             console.log(`pushSHA: ${context.sha}`);
-            console.log(`targetBranchName: ${targetBranchName}`);
             console.log(`IS_RELEASE: ${IS_RELEASE}`);
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
