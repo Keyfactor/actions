@@ -1,4 +1,4 @@
-### The {{ name }} orchestrator is hcapable of the following operations
+### The {{ name }} orchestrator is capable of the following operations
 
 - [{% if about.orchestrator.win.supportsManagementAdd %}x{% else %} {% endif %}] Supports Magnagement Add
 - [{% if about.orchestrator.win.supportsManagementRemove %}x{% else %} {% endif %}] Supports Management Remove
@@ -6,7 +6,7 @@
 - [{% if about.orchestrator.win.supportsDiscovery %}x{% else %} {% endif %}] Supports Discovery
 - [{% if about.orchestrator.win.supportsReenrollment %}x{% else %} {% endif %}] Supports Renrollment
 
-| Operation | Windows | Linux |
+| Operation | Win | Linux |
 |-----|-----|------|
 |Supports Management Add|{% if about.orchestrator.win.supportsManagementAdd %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsManagementAdd %}&check;{% else %} {% endif %} |
 |Supports Management Remove|{% if about.orchestrator.win.supportsManagementRemove %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsManagementRemove %}&check;{% else %} {% endif %} |
