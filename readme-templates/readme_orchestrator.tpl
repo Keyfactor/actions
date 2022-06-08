@@ -6,6 +6,9 @@
 - [{% if about.orchestrator.win.supportsDiscovery %}x{% else %} {% endif %}] Supports Discovery
 - [{% if about.orchestrator.win.supportsReenrollment %}x{% else %} {% endif %}] Supports Renrollment
 
+
+## The following universal orchestrator plugin capabilities may only operate or be supported when running inside a Windows or a Linux hosted Universal Orchestrator. 
+
 | Operation | Win | Linux |
 |-----|-----|------|
 |Supports Management Add|{% if about.orchestrator.win.supportsManagementAdd %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsManagementAdd %}&check;{% else %} {% endif %} |
