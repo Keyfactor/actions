@@ -1,11 +1,6 @@
-## Platform notes
+## Platform Specific Notes
 
-This plugin performs different capabilities depending on the platform where Keyfactor Command is installed
-
-On Windows: {{ about.orchestrator.win.platformSupport }} 
-
-On Linux: {{ about.orchestrator.linux.platformSupport }} 
-
+The Keyfactor Universal Orchestrator may be installed on either Windows or Linux based platforms. The certificate operations supported by a capability may vary based what platform the capability is installed on. The table below indicates what capabilities are supported based on which platform the encompassing Universal Orchestrator is running.
 | Operation | Win | Linux |
 |-----|-----|------|
 |Supports Management Add|{% if about.orchestrator.win.supportsManagementAdd %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsManagementAdd %}&check;{% else %} {% endif %} |
