@@ -11,7 +11,7 @@
 ---
 
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
-{% if integration_type == "orchestrator" %}
+{% if (integration_type == "orchestrator") and (about.orchestrator.win.supportsInventoryFoo is defined) %}
 {% include "./actions/readme-templates/readme_platform_orchestrator.tpl" ignore missing %}
 {% endif %}
 ---
