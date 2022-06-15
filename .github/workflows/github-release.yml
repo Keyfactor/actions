@@ -81,7 +81,7 @@ jobs:
             const mergeSHA = pulls.data[0].merge_commit_sha;
             const targetBranchName = pulls.data[0].base.ref;
 
-            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-');
+            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-'));
 
             console.log(`State: ${state}`);
             console.log(`mergeSHA: ${mergeSHA}`);
