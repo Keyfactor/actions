@@ -9,6 +9,7 @@ If you have a hosted environment or need assistance completing this step, please
 ### Configuring Parameters
 The following are the parameter names and a description of the values needed to configure the {{ name }}.
 
+{% include "./readme-src/readme-paramtable.tpl" %}
 {% include "./readme-src/readme-config.tpl" %}
 
 #### In Keyfactor - PAM Provider
