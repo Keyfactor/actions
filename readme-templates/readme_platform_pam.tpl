@@ -9,7 +9,7 @@ If you have a hosted environment or need assistance completing this step, please
 ### Configuring Parameters
 The following are the parameter names and a description of the values needed to configure the {{ name }}.
 
-{% include "./readme-src/readme-config.tpl" ignore missing %}
+{% include "./readme-src/readme-config.tpl" %}
 
 #### In Keyfactor - PAM Provider
 ##### Installation
@@ -21,7 +21,7 @@ When enabling a PAM provider for Orchestrators only, the first line for `WebAgen
 
 The Keyfactor service and IIS Server should be restarted after making these changes.
 
-{% include "./readme-src/readme-register.tpl" ignore missing %}
+{% include "./readme-src/readme-register.tpl" %}
 
 | Install Location | DLL Binary Folder | Config File |
 | --- | --- | --- |
