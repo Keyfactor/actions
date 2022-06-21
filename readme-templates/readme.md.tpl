@@ -14,6 +14,9 @@
 {% if (integration_type == "orchestrator") and (about is defined) %}
 {% include "./actions/readme-templates/readme_platform_orchestrator.tpl" ignore missing %}
 {% endif %}
+{% if (integration_type == "pam") and (pamRegDLL is defined) %}
+{% include "./actions/readme-templates/readme_platform_pam.tpl" ignore missing %}
+{% endif %}
 ---
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
