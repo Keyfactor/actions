@@ -1,4 +1,4 @@
-{% include "./readme-src/readme-pre.tpl" ignore missing %}
+{% include "./readme-src/readme-pre.md" ignore missing %}
 
 ### Initial Configuration of PAM Provider
 In order to allow Keyfactor to use the new {{ name }}, the definition needs to be added to the application database.
@@ -9,8 +9,8 @@ If you have a hosted environment or need assistance completing this step, please
 ### Configuring Parameters
 The following are the parameter names and a description of the values needed to configure the {{ name }}.
 
-{% include "./readme-src/readme-paramtable.tpl" %}
-{% include "./readme-src/readme-config.tpl" %}
+{% include "./readme-src/readme-paramtable.md" %}
+{% include "./readme-src/readme-config.md" %}
 
 #### In Keyfactor - PAM Provider
 ##### Installation
@@ -22,7 +22,7 @@ When enabling a PAM provider for Orchestrators only, the first line for `WebAgen
 
 The Keyfactor service and IIS Server should be restarted after making these changes.
 
-{% include "./readme-src/readme-register.tpl" %}
+{% include "./readme-src/readme-register.md" %}
 
 | Install Location | DLL Binary Folder | Config File |
 | --- | --- | --- |
@@ -41,5 +41,3 @@ In order to use the PAM Provider, the provider's configuration must be set in th
 After it is set up, you can now use your PAM Provider when configuring certificate stores. Any field that is treated as a Keyfactor secret, such as server passwords and certificate store passwords can be retrieved from your PAM Provider instead of being entered in directly as a secret.
 
 ![](images/password.png)
-
-{% include "./readme-src/readme-post.tpl" ignore missing %}

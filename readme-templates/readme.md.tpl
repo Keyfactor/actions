@@ -12,10 +12,10 @@
 
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
 {% if (integration_type == "orchestrator") and (about is defined) %}
-{% include "./actions/readme-templates/readme_platform_orchestrator.tpl" ignore missing %}
+{% include "./actions/readme-templates/readme_platform_orchestrator.md" ignore missing %}
 {% endif %}
 {% if (integration_type == "pam") and (pamRegDLL is defined) %}
-{% include "./actions/readme-templates/readme_platform_pam.tpl" ignore missing %}
+{% include "./actions/readme-templates/readme_platform_pam.md" ignore missing %}
 {% endif %}
 ---
 {# the readme_source.md file should be the general README content in markdown form #}
