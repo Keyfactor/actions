@@ -92,7 +92,7 @@ jobs:
           token: ${{ secrets.token }}
           allowUpdates: true
           artifacts: ${{ github.workspace }}\${{ env.releaseArtifactName }}
-          name: ${{ env.releaseArtifactName}}
+          name: ${{ steps.latestReleaseTag.outputs.tag }}
           artifactContentType: application/zip
           replacesArtifacts: true
           tag: ${{ steps.latestReleaseTag.outputs.tag }}
