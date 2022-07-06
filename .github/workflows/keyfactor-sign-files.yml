@@ -44,14 +44,14 @@ jobs:
       - name: find latest tag
         uses: oprypin/find-latest-tag@v1
         with:
-          repository: keyfactor/${{ inputs.targetRepo }}  
+          repository: ${{ github.repository_owner }}/${{ inputs.targetRepo }}  
           releases-only: true  
         id: latestReleaseTag  
 
       - name: Download Release Asset
         uses: robinraju/release-downloader@v1.4
         with:
-          repository: "keyfactor/${{ inputs.targetRepo }}"
+          repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           latest: true
           fileName: "*.zip"
@@ -87,7 +87,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          owner: keyfactor
+          owner: ${{ github.repository_owner }}
           repo: ${{ inputs.targetRepo }} 
           token: ${{ secrets.token }}
           allowUpdates: true
