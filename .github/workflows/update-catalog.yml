@@ -18,6 +18,7 @@ jobs:
           token: ${{ secrets.token }}
           path: './catalog-temp/'
           repository: 'Keyfactor/integrations-catalog'
+          ref: 'add-apiclient-catalog' # TODO: Remove this line before commiting to main
       
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:
