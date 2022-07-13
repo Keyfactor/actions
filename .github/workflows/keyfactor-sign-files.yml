@@ -28,7 +28,7 @@ on:
         
 jobs:
   fetch-assets:
-    runs-on: [self-hosted, kf-integ-test] 
+    runs-on: [self-hosted, kf-runner-cs1] 
     steps:
       - name: clean workspace
         run: |
