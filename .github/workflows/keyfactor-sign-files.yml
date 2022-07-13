@@ -22,13 +22,13 @@ on:
 #   Update "Download Release Asset" to use updated action from author to obtain latest tag name
 #   Replace "find latest tag" with output from "Download Release Asset"
 #   Accommodate multiple signFile inputs by using a matrix
-#   Move runner group to kf-self-host-win-cs to use the kf-runner-cs1 machine onprem, using Code Assure
+#   Move runner group to kf-self-hosted-win-cs to use the kf-runner-cs1 machine onprem, using Code Assure
 #
 #######################################################################################################
         
 jobs:
   fetch-assets:
-    runs-on: [self-hosted, kf-self-host-win-cs] 
+    runs-on: [self-hosted, kf-self-hosted-win-cs] 
     steps:
       - name: clean workspace
         run: |
