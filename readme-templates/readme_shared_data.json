@@ -19,7 +19,7 @@
     },
     "support_statement": {
       "community": "is open source and community supported, meaning that there is **no SLA** applicable for these tools.",
-      "kf-community": "is open source and supported by Keyfactor as resources are available. There is no formal SLA for this tool/library/client.",
+      "kf-community": "is open source and there is **no SLA** for this tool/library/client. Keyfactor will address issues as resources become available. Keyfactor customers may request escalation by opening up a support ticket through their Keyfactor representative.",
       "kf-supported": "is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative."
     }
   }
