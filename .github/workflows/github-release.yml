@@ -101,7 +101,7 @@ jobs:
         with:
           release_name: ${{ env.RELEASE_VERSION }}
           body: |
-            [Changelog](../CHANGELOG.MD)
+            [Changelog](../CHANGELOG.md)
           draft: false
           prerelease: ${{ env.IS_PRE_RELEASE == 'True' }}
           prerelease_suffix: rc
