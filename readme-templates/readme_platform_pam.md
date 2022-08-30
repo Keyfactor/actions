@@ -22,6 +22,10 @@ When enabling a PAM provider for Orchestrators only, the first line for `WebAgen
 
 The Keyfactor service and IIS Server should be restarted after making these changes.
 
+```xml
+<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.{{ about.pam.qualifiedName }}, {{ about.pam.regDLL }}" name="{{ about.pam.dbName }}" />
+```
+
 {% include "./readme-src/readme-register.md" %}
 
 | Install Location | DLL Binary Folder | Config File |
