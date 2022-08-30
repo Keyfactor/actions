@@ -18,6 +18,13 @@ In order to setup a new PAM Provider in the Keyfactor Platform for the first tim
 
 After the installation is run, the DLLs need to be installed to the correct location for the PAM Provider to function. From the release, the {{ pamRegDLL }} should be copied to the following folder locations in the Keyfactor installation. Once the DLL has been copied to these folders, edit the corresponding config file. You will need to add a new Unity entry as follows under `<container>`, next to other `<register>` tags.
 
+| Install Location | DLL Binary Folder | Config File |
+| --- | --- | --- |
+| WebAgentServices | WebAgentServices\bin\ | WebAgentServices\web.config |
+| Service | Service\ | Service\CMSTimerService.exe.config |
+| KeyfactorAPI | KeyfactorAPI\bin\ | KeyfactorAPI\web.config |
+| WebConsole | WebConsole\bin\ | WebConsole\web.config |
+
 When enabling a PAM provider for Orchestrators only, the first line for `WebAgentServices` is the only installation needed.
 
 The Keyfactor service and IIS Server should be restarted after making these changes.
@@ -26,14 +33,8 @@ The Keyfactor service and IIS Server should be restarted after making these chan
 <register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.{{ about.pam.qualifiedName }}, {{ about.pam.regDLL }}" name="{{ about.pam.dbName }}" />
 ```
 
-{% include "./readme-src/readme-register.md" %}
 
-| Install Location | DLL Binary Folder | Config File |
-| --- | --- | --- |
-| WebAgentServices | WebAgentServices\bin\ | WebAgentServices\web.config |
-| Service | Service\ | Service\CMSTimerService.exe.config |
-| KeyfactorAPI | KeyfactorAPI\bin\ | KeyfactorAPI\web.config |
-| WebConsole | WebConsole\bin\ | WebConsole\web.config |
+{% include "./readme-src/readme-register.md" %}
 
 ##### Usage
 In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
