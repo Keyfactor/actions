@@ -10,6 +10,8 @@ If you have a hosted environment or need assistance completing this step, please
 The following are the parameter names and a description of the values needed to configure the {{ name }}.
 
 {% include "./readme-src/readme-paramtable.md" %}
+![](images/config.png)
+
 {% include "./readme-src/readme-config.md" %}
 
 #### In Keyfactor - PAM Provider
@@ -40,8 +42,6 @@ The Keyfactor service and IIS Server should be restarted after making these chan
 In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
 
 ![](images/setting.png)
-
-![](images/config.png)
 
 After it is set up, you can now use your PAM Provider when configuring certificate stores. Any field that is treated as a Keyfactor secret, such as server passwords and certificate store passwords can be retrieved from your PAM Provider instead of being entered in directly as a secret.
 {% include "./readme-src/readme-server-password.md" %}
