@@ -36,7 +36,7 @@ The Keyfactor service and IIS Server should be restarted after making these chan
 ```
 
 
-{% include "./readme-src/readme-register.md" %}
+{% include "./readme-src/readme-register.md" ignore missing %}
 
 ##### Usage
 In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
