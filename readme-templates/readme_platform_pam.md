@@ -44,5 +44,5 @@ In order to use the PAM Provider, the provider's configuration must be set in th
 ![](images/config.png)
 
 After it is set up, you can now use your PAM Provider when configuring certificate stores. Any field that is treated as a Keyfactor secret, such as server passwords and certificate store passwords can be retrieved from your PAM Provider instead of being entered in directly as a secret.
-
+{% include "./readme-src/readme-server-password.md" %}
 ![](images/password.png)
