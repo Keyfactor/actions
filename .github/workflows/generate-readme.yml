@@ -12,7 +12,7 @@ jobs:
         with:
           repository: 'Keyfactor/actions'
           path: './actions/'
-#          ref: 'add-pam'
+#          ref: 'new-pam-template'
 
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:

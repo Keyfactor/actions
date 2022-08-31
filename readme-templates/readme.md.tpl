@@ -14,7 +14,7 @@
 {% if (integration_type == "orchestrator") and (about is defined) %}
 {% include "./actions/readme-templates/readme_platform_orchestrator.md" ignore missing %}
 {% endif %}
-{% if (integration_type == "pam") and (pamRegDLL is defined) %}
+{% if (integration_type == "pam") and (about is defined) %}
 {% include "./actions/readme-templates/readme_platform_pam.md" ignore missing %}
 {% endif %}
 ---
