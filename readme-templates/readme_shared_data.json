@@ -5,15 +5,18 @@
       "pam": "PAM Provider",
       "windows-orchestrator": "Windows Orchestrator AnyAgent",
       "ca-gateway": "AnyGateway CA Connector",
-      "terraform": "Keyfactor Provider for Terraform",
+      "terraform-provider": "Terraform Provider",
+      "terraform-module": "Terraform Module",
+      "api-client": "API Client",
       "integ-template": "Integration Template"
     },
     "descriptions": {
+      "api-client": "This API client allows for programmatic management of Keyfactor resources.",
       "orchestrator": "This repository contains a Universal Orchestrator Capability which is a plugin to the Keyfactor Universal Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.\n\nThe Universal Orchestrator is part of the Keyfactor software distribution and is available via the Keyfactor customer portal. For general instructions on installing Capabilities, see the “Keyfactor Command Orchestrator Installation and Configuration Guide” section of the Keyfactor documentation. For configuration details of this specific Capability, see below in this readme.\n\nThe Universal Orchestrator is the successor to the Windows Orchestrator. This Capability plugin only works with the Universal Orchestrator and does not work with the Windows Orchestrator.",
       "pam": "Keyfactor supports the retrieval of credentials from 3rd party Priviledged Access Management (PAM) solutions. Secret values can normally be stored, encrypted at rest, in the Keyfactor Platform database. A PAM Provider can allow these secrets to be stored, managed, and rotated in an external platform. This integration is usually configured on the Keyfactor Platform itself, where the platform can request the credential values when needed. In certain scenarios, a PAM Provider can instead be run on a remote location in conjunction with a Keyfactor Orchestrator to allow credential requests to originate from a location other than the Keyfactor Platform.",
       "windows-orchestrator": "This repository contains a Windows Orchestrator AnyAgent, which is a plugin to the Keyfactor Windows Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.\n\nThe Windows Orchestrator is part of the Keyfactor software distribution and is available via the Keyfactor customer portal. For general instructions on installing AnyAgents, see the “Keyfactor Command Orchestrator Installation and Configuration Guide” section of the Keyfactor documentation. For configuration details of this specific AnyAgent, see below in this readme.\n\nNote that in Keyfactor Version 9, the Windows Orchestrator have been replaced by the Universal Orchestrator. While this AnyAgent continues to work with the Windows Orchestrator, and the Windows Orchestrator is supported alongside the Universal Orchestrator talking to Keyfactor version 9, AnyAgent plugins cannot be used with the Universal Orchestrator.",
       "ca-gateway": "This repository contains an AnyGateway CA Connector, which is a plugin to the Keyfactor AnyGateway. AnyGateway CA Connectors allow Keyfactor Command to be used for inventory, issuance, and revocation of certificates from a third-party certificate authority.",
-      "terraform": "The Keyfactor provider for Terraform enables programmatic management of Keyfactor resources. ",
+      "terraform-provider": "The Terraform provider enables management of Keyfactor resources utilizing HashiCorp Terraform.",
       "integ-template": "This repository can be used to generate a boilerplate integration project for PAM and Orchestrator types"
     },
     "integration_status": {
