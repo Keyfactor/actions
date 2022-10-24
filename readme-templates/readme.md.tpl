@@ -8,6 +8,7 @@
 
 {{ shared.descriptions[integration_type] }}
 
+{% if ((integration_type == "orchestrator") or (integration_type == "pam") and (about is defined)) %}
 ---
 {% if (support_level is defined) %}
 
@@ -27,6 +28,7 @@ ___
 {% include "./actions/readme-templates/readme_platform_pam.md" ignore missing %}
 {% endif %}
 ---
+{% endif %}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
 
