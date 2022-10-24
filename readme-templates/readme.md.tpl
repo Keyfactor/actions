@@ -8,7 +8,7 @@
 
 {{ shared.descriptions[integration_type] }}
 
-{% if ((integration_type == "orchestrator") or (integration_type == "pam") and (about is defined)) %}
+{% if ((integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider") and (about is defined)) %}
 ---
 {% if (support_level is defined) %}
 
