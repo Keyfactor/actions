@@ -8,8 +8,6 @@
 
 {{ shared.descriptions[integration_type] }}
 
-{% if ((integration_type == "orchestrator") or (integration_type == "pam") and (about is defined)) %}
----
 {% if (support_level is defined) %}
 
 ## Support for {{ name }}
@@ -19,6 +17,9 @@
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 ___
 {% endif %}
+
+{% if ((integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider") and (about is defined)) %}
+---
 
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
 {% if (integration_type == "orchestrator") and (about is defined) %}
