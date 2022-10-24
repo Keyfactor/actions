@@ -10,6 +10,15 @@
 
 {% if ((integration_type == "orchestrator") or (integration_type == "pam") and (about is defined)) %}
 ---
+{% if (support_level is defined) %}
+
+## Support for {{ name }}
+
+{{ name }} {{ shared.support_statement[support_level] }}
+
+###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
+___
+{% endif %}
 
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
 {% if (integration_type == "orchestrator") and (about is defined) %}
