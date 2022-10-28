@@ -46,13 +46,14 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.targetRepo }}  
           releases-only: true  
+          token: ${{ secrets.CODESIGN_TOKEN }}
         id: latestReleaseTag  
 
       - name: Download Release Asset
         uses: robinraju/release-downloader@v1.4
         with:
           repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CODESIGN_TOKEN }}
           latest: true
           fileName: "*.zip"
           github-api-url: "https://keyfactor.com/api/v3"
@@ -89,7 +90,7 @@ jobs:
         with:
           owner: ${{ github.repository_owner }}
           repo: ${{ inputs.targetRepo }} 
-          token: ${{ secrets.token }}
+          token: ${{ secrets.CODESIGN_TOKEN }}
           allowUpdates: true
           artifacts: ${{ github.workspace }}\${{ env.releaseArtifactName }}
           name: ${{ steps.latestReleaseTag.outputs.tag }}
