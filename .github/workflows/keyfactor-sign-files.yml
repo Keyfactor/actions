@@ -53,7 +53,7 @@ jobs:
         uses: robinraju/release-downloader@v1.4
         with:
           repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
-          token: ${{ secrets.CODESIGN_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           latest: true
           fileName: "*.zip"
           github-api-url: "https://keyfactor.com/api/v3"
