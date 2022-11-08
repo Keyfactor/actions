@@ -90,7 +90,7 @@ jobs:
         with:
           owner: ${{ github.repository_owner }}
           repo: ${{ inputs.targetRepo }} 
-          token: ${{ secrets.CODESIGN_TOKEN }}
+          token: ${{ secrets.token }}
           allowUpdates: true
           artifacts: ${{ github.workspace }}\${{ env.releaseArtifactName }}
           name: ${{ steps.latestReleaseTag.outputs.tag }}
