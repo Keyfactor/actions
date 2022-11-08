@@ -64,6 +64,7 @@ jobs:
       - name: Sign Extracted File
         run: |
           $codeCertificate = Get-ChildItem Cert:\LocalMachine\My | Where-Object {$_.Thumbprint -Like "AF07*43EDF"}
+          echo $codeCertificate
           Set-AuthenticodeSignature -FilePath c:\extract\**\${{ inputs.signFile }} -Certificate $codeCertificate -TimeStampServer http://timestamp.digicert.com
 
 #      - name: create fingerprint
