@@ -1,3 +1,7 @@
+## Keyfactor Version Supported
+
+The minimum version of the Keyfactor Universal Orchestrator Framework needed to run this version of the extension is {{ about.orchestrator.UOFramework }}
+
 ## Platform Specific Notes
 
 The minimum version of the Universal Orchestrator Framework needed to run this version of the extension is {{ about.orchestrator.UOFramework }}
