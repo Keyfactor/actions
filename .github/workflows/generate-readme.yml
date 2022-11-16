@@ -1,5 +1,10 @@
 name: Generate README from templates and data files
-on: [workflow_call]
+on:
+  workflow_call:
+    secrets:
+      token: 
+        description: 'Secret token from caller workflow to approve readme'
+        required: true
 
 jobs:
   generate-readme:
@@ -7,12 +12,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.token }}
 
       - uses: actions/checkout@v2
         with:
           repository: 'Keyfactor/actions'
           path: './actions/'
-#          ref: 'uo-framework-supported'
+          token: ${{ secrets.token }}
+#          ref: 'test-pat-actions'
 
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:
