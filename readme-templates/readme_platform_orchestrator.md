@@ -15,7 +15,7 @@ The Keyfactor Universal Orchestrator may be installed on either Windows or Linux
 |Supports Renrollment|{% if about.orchestrator.win.supportsReenrollment %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsReenrollment %}&check;{% else %} {% endif %} |
 |Supports Inventory|{% if about.orchestrator.win.supportsInventory %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsInventory %}&check;{% else %} {% endif %} |
 
-{% if about.orchestrator.pam-support %}
+{% if about.orchestrator.pam_support %}
 ## PAM Integration
 
 This orchestrator extension has the ability to connect to a variety of supported PAM providers to allow for the retrieval of various client hosted secrets right from the orchestrator server itself.  This eliminates the need to set up the PAM integration on Keyfactor Command which may be in an environment that the client does not want to have access to their PAM provider.
