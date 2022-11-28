@@ -15,3 +15,15 @@ The Keyfactor Universal Orchestrator may be installed on either Windows or Linux
 |Supports Renrollment|{% if about.orchestrator.win.supportsReenrollment %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsReenrollment %}&check;{% else %} {% endif %} |
 |Supports Inventory|{% if about.orchestrator.win.supportsInventory %}&check;{% else %} {% endif %} |{% if about.orchestrator.linux.supportsInventory %}&check;{% else %} {% endif %} |
 
+{% if about.orchestrator.pam-support %}
+## PAM Integration
+
+This orchestrator extension has the ability to connect to a variety of supported PAM providers to allow for the retrieval of various client hosted secrets right from the orchestrator server itself.  This eliminates the need to set up the PAM integration on Keyfactor Command which may be in an environment that the client does not want to have access to their PAM provider.
+
+The secrets that this orchestrator extension supports for use with a PAM Provider are:
+
+{% include "./readme-src/readme-pam-support.md" %}
+It is not necessary to implement all of the secrets available to be managed by a PAM provider.  For each value that you want managed by a PAM provider, simply enter the key value inside your specific PAM provider that will hold this value into the corresponding field when setting up the certificate store, discovery job, or API call.
+
+Setting up a PAM provider for use involves adding an additional section to the manifest.json file for this extension as well as setting up the PAM provider you will be using.  Each of these steps is specific to the PAM provider you will use and are documented in the specific GitHub repo for that provider.  For a list of Keyfactor supported PAM providers, please reference the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam).
+{% endif %}
