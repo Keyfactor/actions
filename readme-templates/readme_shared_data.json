@@ -1,7 +1,7 @@
 {
   "shared": {
     "display_names": {
-      "orchestrator": "Universal Orchestrator Capability",
+      "orchestrator": "Universal Orchestrator Extension",
       "pam": "PAM Provider",
       "windows-orchestrator": "Windows Orchestrator AnyAgent",
       "ca-gateway": "AnyGateway CA Connector",
