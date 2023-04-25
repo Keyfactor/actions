@@ -1,0 +1,36 @@
+name: Merge Orchestrator store_types.json
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: token
+        required: true
+  push:
+    
+jobs:
+  merge_json_job:
+    runs-on: ubuntu-latest
+    name: Merge json files
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.UPDATE_STORE_TYPES }}  
+          path: './json-temp/'  
+          repository: 'Keyfactor/kfutil/blob/main/store_types.json' 
+
+      - name: Merge input-file into library-file json data
+        id: merge-json
+        uses: Keyfactor/actions-merge-storetypes@v0.1.0 
+        with:
+          input-file: integration-manifest.json
+          library-file: ./json-temp/store_types.json
+
+      - uses: Keyfactor/add-and-commit@v7.5.0
+        with:
+          author_name: 'Keyfactor'
+          author_email: 'keyfactor@keyfactor.com'
+          branch: 'main'
+          message: ${{ format('Merged the {0} stores-type.json', github.event.repository.name) }}
+          add: 'store_types.json'
+          cwd: './json-temp/'
