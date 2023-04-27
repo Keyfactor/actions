@@ -18,7 +18,7 @@
 ___
 {% endif %}
 
-{% if ((integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider") and (about is defined)) %}
+{% if ((integration_type == "ca-gateway") or (integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider") and (about is defined)) %}
 ---
 
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
