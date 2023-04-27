@@ -28,6 +28,9 @@ ___
 {% if (integration_type == "pam") and (about is defined) %}
 {% include "./actions/readme-templates/readme_platform_pam.md" ignore missing %}
 {% endif %}
+{% if (integration_type == "ca-gateway") %}
+{% include "./actions/readme-templates/readme_platform_cagateway.md" ignore missing %}
+{% endif %}
 ---
 {% endif %}
 {# the readme_source.md file should be the general README content in markdown form #}
