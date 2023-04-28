@@ -17,7 +17,7 @@ jobs:
         with:
           token: ${{ secrets.UPDATE_STORE_TYPES }}  
           path: './json-temp/'  
-          repository: 'Keyfactor/kfutil/blob/main/store_types.json' 
+          repository: 'Keyfactor/kfutil' 
 
       - name: Merge input-file into library-file json data
         id: merge-json
