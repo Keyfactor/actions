@@ -5,7 +5,7 @@ on:
       token:
         description: token
         required: true
-    
+
 jobs:
   merge_json_job:
     runs-on: ubuntu-latest
