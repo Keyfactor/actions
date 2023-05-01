@@ -7,7 +7,7 @@ This is done by running the provided `kfutil` tool to install the PAM definition
 The `kfutil` tool, after being [configured for API access](https://github.com/Keyfactor/kfutil#quickstart), can be run in the following manner to install the PAM definition from the Keyfactor repository:
 
 ```
-kfutil pam types-create -r {{ about.pam.assemblyName }} -n {{ name }}
+kfutil pam types-create -r {{ about.pam.assemblyName }} -n {{ about.pam.dbName }}
 ```
 
 ### Configuring Parameters
