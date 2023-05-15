@@ -101,7 +101,8 @@ jobs:
         with:
           release_name: ${{ env.RELEASE_VERSION }}
           body: |
-            [Changelog](/../main/CHANGELOG.md)
+            [Versioned Changelog and Readme:](/.) 
+            For the latest README.md updates visit the [Main Page for this repository](/../main)
           draft: false
           prerelease: ${{ env.IS_PRE_RELEASE == 'True' }}
           prerelease_suffix: rc
