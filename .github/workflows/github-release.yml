@@ -36,7 +36,7 @@ jobs:
       # checks if pre-release patch version can be determined from existing release tags or if we start at 0
       - name: GitHub Script checks for existing version tags
         id: existing_version
-        uses: actions/github-script@v4.0.2
+        uses: actions/github-script@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
@@ -44,7 +44,7 @@ jobs:
         with:
           script: |
             // check for existing tags on this major.minor version
-            const tagsList = await github.git.listMatchingRefs({
+            const tagsList = await github.rest.git.listMatchingRefs({
              owner: context.repo.owner,
              repo: context.repo.repo,
              ref: 'tags'
@@ -63,14 +63,14 @@ jobs:
       # if not a pre release, check if there is a pull request that has closed + merged with the commit SHA of this push
       - name: GitHub Script checks for merged pull request
         id: merged_pull_request
-        uses: actions/github-script@v4.0.2
+        uses: actions/github-script@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: github.event_name == 'push'
         with:
           script: |
             // get all pull requests for this repo
-            const pulls = await github.pulls.list({
+            const pulls = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed'
