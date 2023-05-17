@@ -94,7 +94,7 @@ jobs:
       - name: Create new release
         id: create_release
 #        uses: keyfactor/action-create-release@upd-deprecated
-        uses: keyfactor/action-create-release@support-pre-version
+        uses: keyfactor/action-create-release@upd-deprecated # was support-pre-version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
