@@ -94,7 +94,7 @@ jobs:
       - name: Create new release
         id: create_release
 #        uses: keyfactor/action-create-release@upd-deprecated
-        uses: fiddlermikey/action-create-release@main
+        uses: keyfactor/action-create-release@b57fea317a67e7b20203904e85b9f78500b1a489
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
