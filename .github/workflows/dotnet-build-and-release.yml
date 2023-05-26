@@ -88,7 +88,7 @@ jobs:
       - name: Upload Release Asset (x64)
         if: success() && env.CREATE_RELEASE == 'True'
         id: upload-release-asset-x64
-        uses: keyfactor/upload-release-asset@upd-upload-action
+        uses: keyfactor/upload-release-assets@v1.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
