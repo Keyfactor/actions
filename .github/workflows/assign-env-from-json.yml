@@ -57,6 +57,13 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'about.orchestrator.UOFramework'
 
+      - name: Read release_dir property 
+        uses: ./tools
+        id: read-release_dir
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.UOFramework'
+
       - name: Display the variables
         id: write
         run: |
@@ -64,6 +71,7 @@ jobs:
           echo "The value for ${{ steps.read-type.outputs.output-property }} is ${{ steps.read-type.outputs.output-value }}"
           echo "The value for ${{ steps.read-update_catalog.outputs.output-property }} is ${{ steps.read-update_catalog.outputs.output-value }}"
           echo "The value for ${{ steps.read-UOFramework.outputs.output-property }} is ${{ steps.read-UOFramework.outputs.output-value }}"
+          echo "The value for ${{ steps.read-release_dir.outputs.output-property }} is ${{ steps.read-release_dir.outputs.output-value }}"
 
       - name: adding final markdown
         id: adding-final-markdown
@@ -72,5 +80,6 @@ jobs:
           echo "###  ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
           echo "###  ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
           echo "###  ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "###  ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
 
 
