@@ -1,5 +1,5 @@
 name: Set Environment Variables from JSON
-on: [push]
+on: [workflow_call]
 
 jobs:
   assign-from-json:
