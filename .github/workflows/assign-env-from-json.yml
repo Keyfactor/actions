@@ -62,7 +62,7 @@ jobs:
         id: read-release_dir
         with:
           input-file: 'src/integration-manifest.json'
-          input-property: 'about.orchestrator.UOFramework'
+          input-property: 'release_dir'
 
       - name: Display the variables
         id: write
