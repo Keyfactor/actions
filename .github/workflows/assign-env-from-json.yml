@@ -10,27 +10,20 @@ jobs:
   assign-from-json:
     runs-on: ubuntu-latest
     outputs:
-      release_dir: ${{ steps.read-release_dir.outputs.release_dir }}
+      release_dir: ${{ steps.read-release_dir.outputs.output-value }}
     name: Set workflow variables from integration-manifest.json
     steps:
-      - name: Checkout
+      - name: checkout-json-file
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: src
 
-      - name: Checkout
+      - name: checkout-action
         uses: actions/checkout@v3
         with:
           repository: fiddlermikey/assign-from-json
           path: tools
-
-      - name: Read the integration manifest
-        uses: ./tools
-        id: read
-        with:
-          input-file: 'src/integration-manifest.json'
-          input-property: 'name'
 
       - name: adding initial markdown
         id: adding-initial-markdown
