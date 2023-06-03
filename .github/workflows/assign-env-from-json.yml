@@ -10,7 +10,7 @@ jobs:
   assign-from-json:
     runs-on: ubuntu-latest
     outputs:
-      release_dir: ${{ steps.read-release-dir.outputs.release_dir }}
+      release_dir: ${{ steps.read-release_dir.outputs.release_dir }}
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: Checkout
