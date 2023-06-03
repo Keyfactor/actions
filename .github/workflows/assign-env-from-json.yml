@@ -1,9 +1,16 @@
 name: Set Environment Variables from JSON
-on: [workflow_call]
+on: 
+  workflow_call:
+    outputs:
+      release_dir:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.release_dir }}      
 
 jobs:
   assign-from-json:
     runs-on: ubuntu-latest
+    outputs:
+      release_dir: ${{ steps.read-release-dir.outputs.release_dir }}
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: Checkout
