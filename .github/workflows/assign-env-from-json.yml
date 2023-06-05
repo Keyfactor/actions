@@ -1,0 +1,101 @@
+name: Set Environment Variables from JSON
+on: 
+  workflow_call:
+    outputs:
+      release_dir:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.release_dir }}      
+      name:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.name }}      
+      integration_type:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.integration_type }}      
+      update_catalog:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.update_catalog }}      
+      UOFramework:
+        description: The UOFramework property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.UOFramework }}      
+
+jobs:
+  assign-from-json:
+    runs-on: ubuntu-latest
+    outputs:
+      release_dir: ${{ steps.read-release_dir.outputs.output-value }}
+      name: ${{ steps.read-name.outputs.output-value }}
+      integration_type: ${{ steps.read-type.outputs.output-value }}
+      update_catalog: ${{ steps.read-update_catalog.outputs.output-value }}
+      UOFramework: ${{ steps.read-UOFramework.outputs.output-value }}
+    name: Set workflow variables from integration-manifest.json
+    steps:
+      - name: checkout-json-file
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: src
+
+      - name: checkout-action
+        uses: actions/checkout@v3
+        with:
+          repository: fiddlermikey/assign-from-json
+          path: tools
+
+      - name: adding initial markdown
+        id: adding-initial-markdown
+        run: echo '### Reading integration-manifest.json' > $GITHUB_STEP_SUMMARY
+
+      - name: Read name property 
+        uses: ./tools
+        id: read-name
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'name'
+
+      - name: Read integration_type property 
+        uses: ./tools
+        id: read-type
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'integration_type'
+
+      - name: Read update_catalog property 
+        uses: ./tools
+        id: read-update_catalog
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'update_catalog'
+
+      - name: Read UOFramework property 
+        uses: ./tools
+        id: read-UOFramework
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.UOFramework'
+
+      - name: Read release_dir property 
+        uses: ./tools
+        id: read-release_dir
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'release_dir'
+
+      - name: Display the variables
+        id: write
+        run: |
+          echo "The value for ${{ steps.read-name.outputs.output-property }} is ${{ steps.read-name.outputs.output-value }}"
+          echo "The value for ${{ steps.read-type.outputs.output-property }} is ${{ steps.read-type.outputs.output-value }}"
+          echo "The value for ${{ steps.read-update_catalog.outputs.output-property }} is ${{ steps.read-update_catalog.outputs.output-value }}"
+          echo "The value for ${{ steps.read-UOFramework.outputs.output-property }} is ${{ steps.read-UOFramework.outputs.output-value }}"
+          echo "The value for ${{ steps.read-release_dir.outputs.output-property }} is ${{ steps.read-release_dir.outputs.output-value }}"
+
+      - name: adding final markdown
+        id: adding-final-markdown
+        run: |
+          echo "###  ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "###  ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "###  ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "###  ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "###  ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+
+
