@@ -5,12 +5,28 @@ on:
       release_dir:
         description: The release_dir property from integration-manifest.json
         value: ${{ jobs.assign-from-json.outputs.release_dir }}      
+      name:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.name }}      
+      integration_type:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.integration_type }}      
+      update_catalog:
+        description: The release_dir property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.update_catalog }}      
+      UOFramework:
+        description: The UOFramework property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.UOFramework }}      
 
 jobs:
   assign-from-json:
     runs-on: ubuntu-latest
     outputs:
       release_dir: ${{ steps.read-release_dir.outputs.output-value }}
+      name: ${{ steps.read-name.outputs.output-value }}
+      integration_type: ${{ steps.read-type.outputs.output-value }}
+      update_catalog: ${{ steps.read-update_catalog.outputs.output-value }}
+      UOFramework: ${{ steps.read-UOFramework.outputs.output-value }}
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: checkout-json-file
@@ -27,7 +43,7 @@ jobs:
 
       - name: adding initial markdown
         id: adding-initial-markdown
-        run: echo '### Input file read' > $GITHUB_STEP_SUMMARY
+        run: echo '### Reading integration-manifest.json' > $GITHUB_STEP_SUMMARY
 
       - name: Read name property 
         uses: ./tools
