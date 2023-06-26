@@ -1,6 +1,6 @@
 name: Set Environment Variables from JSON
 on: 
-  workflow_call:
+  workflow_call: # Add additional dispatched output properties
     outputs:
       release_dir:
         description: The release_dir property from integration-manifest.json
@@ -21,7 +21,7 @@ on:
 jobs:
   assign-from-json:
     runs-on: ubuntu-latest
-    outputs:
+    outputs: # Add properties to be sent to dispatched workflow(s)
       release_dir: ${{ steps.read-release_dir.outputs.output-value }}
       name: ${{ steps.read-name.outputs.output-value }}
       integration_type: ${{ steps.read-type.outputs.output-value }}
@@ -41,7 +41,7 @@ jobs:
           repository: fiddlermikey/assign-from-json
           path: tools
 
-      - name: adding initial markdown
+      - name: Adding initial markdown for Summary
         id: adding-initial-markdown
         run: echo '### Reading integration-manifest.json' > $GITHUB_STEP_SUMMARY
 
@@ -80,16 +80,8 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'release_dir'
 
-      - name: Display the variables
-        id: write
-        run: |
-          echo "The value for ${{ steps.read-name.outputs.output-property }} is ${{ steps.read-name.outputs.output-value }}"
-          echo "The value for ${{ steps.read-type.outputs.output-property }} is ${{ steps.read-type.outputs.output-value }}"
-          echo "The value for ${{ steps.read-update_catalog.outputs.output-property }} is ${{ steps.read-update_catalog.outputs.output-value }}"
-          echo "The value for ${{ steps.read-UOFramework.outputs.output-property }} is ${{ steps.read-UOFramework.outputs.output-value }}"
-          echo "The value for ${{ steps.read-release_dir.outputs.output-property }} is ${{ steps.read-release_dir.outputs.output-value }}"
-
-      - name: adding final markdown
+      - name: Write variables to Summary
+      #
         id: adding-final-markdown
         run: |
           echo "###  ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
