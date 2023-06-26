@@ -42,7 +42,7 @@ jobs:
         with:
           token: ${{ secrets.token }}
 
-      - uses: Keyfactor/action-create-storetype-md@main
+      - uses: Keyfactor/action-create-storetype-md@v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
