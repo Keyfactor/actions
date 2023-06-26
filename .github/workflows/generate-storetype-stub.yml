@@ -39,7 +39,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          add: README.md --force
-          message: Update generated README
+          add: store-types-tables.md
+          message: ${{ format('Updated the {0} readme-src/store-types-tables.md', github.event.repository.name) }}
           author_name: Keyfactor
           author_email: keyfactor@keyfactor.github.io
+          cwd: './readme-src/'
