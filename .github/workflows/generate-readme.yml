@@ -20,7 +20,7 @@ jobs:
           repository: 'Keyfactor/actions'
           path: './actions/'
           token: ${{ secrets.token }}
-#          ref: 'add-gateway-template' # Comment out this line when done testing
+#          ref: 'cert-store-stub' # Comment out this line when done testing
 
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:
