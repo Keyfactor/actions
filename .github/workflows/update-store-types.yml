@@ -20,7 +20,7 @@ jobs:
 
       - name: Merge input-file into library-file json data
         id: merge-json
-        uses: Keyfactor/actions-merge-storetypes@v1.0.0
+        uses: Keyfactor/actions-merge-storetypes@v1.0.1
         with:
           input-file: integration-manifest.json
           library-file: ./json-temp/store_types.json
