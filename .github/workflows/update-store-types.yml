@@ -52,4 +52,4 @@ jobs:
           author_name: 'Keyfactor'
           author_email: 'keyfactor@keyfactor.com'
           message: ${{ format('Created the {0} store_type readme stub md', github.event.repository.name) }}
-          add: './readme-src/store-types-tables.md'
+          add: ./readme-src/store-types-tables.md --force
