@@ -15,7 +15,7 @@ on:
         description: Topic indicating this repo should be skipped
         required: false
         type: string
-        default: kf-customer-private
+        default: 'kf-customer-private'
        
 jobs:
   update-team-permissions:
