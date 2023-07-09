@@ -35,7 +35,7 @@ jobs:
             repo: context.repo.repo,
             });
             const size = topics.data.names.length;
-            const pos = topics.data.names.indexOf(${{inputs.exclude-topic}})
+            const pos = topics.data.names.indexOf('${{inputs.exclude-topic}}')
             var IS_PRIVATE=
             (size > 0 && pos > 0) ? IS_PRIVATE='T' : IS_PRIVATE='F'
             core.exportVariable('IS_PRIVATE', `${IS_PRIVATE}`);
