@@ -76,7 +76,7 @@ jobs:
             var TOPIC_EXISTS=
             console.log(`Size: ${size} and Pos: ${pos}`)
             (size > 0 && pos > 0) ? TOPIC_EXISTS='T' : TOPIC_EXISTS='F'
-            core.exportVariable('TOPIC_EXISTS', ${TOPIC_EXISTS});
+            core.exportVariable('TOPIC_EXISTS', TOPIC_EXISTS);
             
       - name: GitHub Script configures teams if not matching excluded topic
         id: update_topics
