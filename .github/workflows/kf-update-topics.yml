@@ -65,10 +65,6 @@ jobs:
           github-token: ${{ secrets.token }}
           script: |
             console.log(`Checking for ${{ steps.map_type.outputs.topic-label }}`)
-            //const topics = await github.request("GET /repos/{owner}/{repo}/topics", {
-            //owner: context.repo.owner,
-            //repo: context.repo.repo,
-            //});
             const topics = {
               "names": [
                 "keyfactor-cagateway",
