@@ -25,14 +25,14 @@ jobs:
           input-file: integration-manifest.json
           library-file: ./json-temp/store_types.json
 
-      - uses: Keyfactor/add-and-commit@v9.1.3
-        with:
-          author_name: 'Keyfactor'
-          author_email: 'keyfactor@keyfactor.com'
-          branch: 'main'
-          message: ${{ format('Merged the {0} stores-type.json', github.event.repository.name) }}
-          add: 'store_types.json'
-          cwd: './json-temp/'
+      #- uses: Keyfactor/add-and-commit@v9.1.3
+      #  with:
+      #    author_name: 'Keyfactor'
+      #    author_email: 'keyfactor@keyfactor.com'
+      #    branch: 'main'
+      #    message: ${{ format('Merged the {0} stores-type.json', github.event.repository.name) }}
+      #    add: 'store_types.json'
+      #    cwd: './json-temp/'
 
   create_certstore_stub:
     runs-on: ubuntu-latest

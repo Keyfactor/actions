@@ -1,0 +1,98 @@
+name: Update repo topics
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+    inputs:
+      topicArray: 
+        description: Mapping of integration_type to topic
+        required: false
+        type: string
+        default: '[["orchestrator", "keyfactor-universal-orchestrator"],["windows-orchestrator", "keyfactor-orchestrator"],["ca-gateway", "keyfactor-cagateway"], ["pam", "keyfactor-pam"], ["api-client", "keyfactor-api-client"]]'
+       
+jobs:
+  update-team-permissions:
+    name: Update Topics for this Repository
+    runs-on: ubuntu-latest
+    outputs:
+      topic_exists: ${{ steps.check_topic.outputs.exists }}
+    steps:
+      - name: Get integration_type
+        id: get_type
+        uses: fiddlermikey/assign-from-json@v0.9
+        with:
+          input-file: integration-manifest.json
+          input-property: integration_type
+
+      - name: Map type to topic
+        id: map_type
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log(`map_type`);
+            switch (${{ steps.get_type.outputs.output-value }}) {
+            case 'orchestrator':
+              topic = 'keyfactor-universal-orchestrator'
+              break;
+            case 'windows-orchestrator':
+              topic = 'keyfactor-orchestrator'
+              break;
+            case 'ca-gateway':
+              topic = 'keyfactor-cagateway'
+              break;
+            case 'pam':
+              topic = 'keyfactor-pam'
+              break;
+            case 'api-client':
+              topic = 'keyfactor-api-client'
+              break;
+            default:
+              topic = 'empty'
+              console.log(`Unknwon type: ` + repoJSONProps.integration_type);
+            core.setOutput('topic-label', topic);
+            console.log(`Topic: ${topic}`);
+          
+      - name: Check for topic kf-customer-private
+        id: check_topic
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // check existing topics 
+            const topics = await github.rest.repos.getAllTopics({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            });
+            const size = topics.data.names.length;
+            const pos = topics.data.names.indexOf('${{ steps.get_type.outputs.output-value }}') # use the var representing the integration_type
+            var TOPIC_EXISTS=
+            (size > 0 && pos > 0) ? TOPIC_EXISTS='T' : TOPIC_EXISTS='F'
+            core.exportVariable('TOPIC_EXISTS', `${TOPIC_EXISTS}`);
+            
+      - name: GitHub Script configures teams if not matching excluded topic
+        id: update_topics
+        uses: actions/github-script@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+        if: env.TOPIC_EXISTS != 'T'
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            const teams = ${{inputs.teamArray}}
+            const repo = context.repo.repo
+            const org = context.repo.owner
+            const owner = org
+            console.log(`org: ${org}\nrepo ${repo}`)
+            teams.forEach(element => {
+              console.log(element[0] + ' : ' + element[1])
+              const team_slug = element[0]
+              const permission = element[1]
+              github.rest.teams.addOrUpdateRepoPermissionsInOrg({
+                org,
+                team_slug,
+                owner,
+                repo,
+              })
+             })
+
