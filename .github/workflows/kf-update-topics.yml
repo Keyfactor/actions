@@ -20,6 +20,8 @@ jobs:
       topic_exists: ${{ steps.check_topic.outputs.exists }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.token }}
       - name: Get integration_type
         id: get_type
         uses: fiddlermikey/assign-from-json@v0.9
@@ -60,6 +62,7 @@ jobs:
         id: check_topic
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.token }}
           script: |
             console.log(`Checking for ${{ steps.map_type.outputs.topic-label }}`)
             const topics = await github.rest.repos.getAllTopics({
