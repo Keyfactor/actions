@@ -33,7 +33,7 @@ jobs:
         with:
           script: |
             console.log(`map_type`);
-            switch ('ca-gateway') {
+            switch ("ca-gateway") {
             case 'orchestrator':
               topic = 'keyfactor-universal-orchestrator'
               break;
