@@ -71,9 +71,7 @@ jobs:
             });
             const repoTopics = topics.data.names;
             console.log('Data: ' + repoTopics)
-            const size = repoTopics.length;
-            const pos = repoTopics.indexOf('${{ steps.map_type.outputs.topic-label }}') # use the var representing the integration_type
-            
+
       - name: GitHub Script configures teams if not matching excluded topic
         id: update_topics
         uses: actions/github-script@v6
