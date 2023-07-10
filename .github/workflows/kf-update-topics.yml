@@ -56,7 +56,7 @@ jobs:
             core.setOutput('topic-label', topic);
             console.log(`Topic: ${topic}`);
           
-      - name: Check for topic kf-customer-private
+      - name: Check for existing topic
         id: check_topic
         uses: actions/github-script@v6
         with:
@@ -67,9 +67,11 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             });
+            console.log('Data' + topics.data)
             const size = topics.data.names.length;
             const pos = topics.data.names.indexOf('${{ steps.map_type.outputs.topic-label }}') # use the var representing the integration_type
             var TOPIC_EXISTS=
+            console.log(`Size: ${size} and Pos: ${pos}`)
             (size > 0 && pos > 0) ? TOPIC_EXISTS='T' : TOPIC_EXISTS='F'
             core.exportVariable('TOPIC_EXISTS', `${TOPIC_EXISTS}`);
             
