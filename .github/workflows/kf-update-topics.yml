@@ -32,7 +32,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log(`map_type`);
+            console.log(`map type: ${{ steps.get_type.outputs.output-value }}`);
             switch ('${{ steps.get_type.outputs.output-value }}') {
             case 'orchestrator':
               topic = 'keyfactor-universal-orchestrator'
@@ -61,7 +61,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            // check existing topics 
             console.log(`Checking for ${{ steps.map_type.outputs.topic-label }}`)
             const topics = await github.rest.repos.getAllTopics({
             owner: context.repo.owner,
