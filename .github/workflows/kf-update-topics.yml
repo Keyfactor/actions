@@ -69,8 +69,8 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             });
-            // const repoTopics = topics.data.names;
-            // console.log('Data: ' + repoTopics)
+            const repoTopics = topics.data.names;
+            console.log('Data: ' + repoTopics)
             // const size = repoTopics.length;
             // const pos = repoTopics.indexOf('${{ steps.map_type.outputs.topic-label }}') # use the var representing the integration_type
             // var TOPIC_EXISTS=
