@@ -52,6 +52,7 @@ jobs:
             default:
               topic = 'empty'
               console.log(`Unknwon type: ` + repoJSONProps.integration_type);
+            }
             core.setOutput('topic-label', topic);
             console.log(`Topic: ${topic}`);
           
