@@ -74,6 +74,7 @@ jobs:
             const size = repoTopics.length;
             const pos = repoTopics.indexOf('${{ steps.map_type.outputs.topic-label }}') # use the var representing the integration_type
             var TOPIC_EXISTS=
+            console.log(TOPIC_EXISTS)
             // console.log(`Size: ${size} and Pos: ${pos}`)
             // (size > 0 && pos > 0) ? TOPIC_EXISTS='T' : TOPIC_EXISTS='F'
             // console.log('Topic Exists:' + TOPIC_EXISTS)
