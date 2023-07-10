@@ -19,6 +19,7 @@ jobs:
     outputs:
       topic_exists: ${{ steps.check_topic.outputs.exists }}
     steps:
+      - uses: actions/checkout@v3
       - name: Get integration_type
         id: get_type
         uses: fiddlermikey/assign-from-json@v0.9
