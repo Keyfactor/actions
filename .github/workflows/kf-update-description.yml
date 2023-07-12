@@ -51,6 +51,7 @@ jobs:
         with:
           github-token: ${{ secrets.token }}
           script: |
+            // Debug consts here
             const repo = 'my test'
             const owner = 'me'
             const description-text = ${{ steps.get_description.outputs.output-value }}
