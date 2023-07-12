@@ -56,4 +56,4 @@ jobs:
             console.log(`repo:${repo} - owner:${owner}`)
             const descriptionText = ${{ steps.get_description.outputs.output-value}}
             console.log(`descriptionText`);
-            console.log(descriptionText)
+            console.log(${{ steps.get_description.outputs.output-value}})
