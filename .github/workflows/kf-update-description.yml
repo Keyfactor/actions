@@ -50,4 +50,4 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log(`New description: ${{ steps.get_description.outputs.output-property }}`)
+            console.log(`New description: ${{ steps.get_description.outputs.output-value }}`)
