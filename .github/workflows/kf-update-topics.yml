@@ -1,5 +1,11 @@
 name: Update Repo Settings
-on: [workflow_dispatch, workflow_call]
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+    
 
 jobs:
   read_type:
@@ -9,13 +15,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repo-token: ${{ secrets.GH_REPO_CONFIG}}
+          repo-token: ${{ secrets.token}}
       - name: Update topic from integration_type
         id: update
         uses: keyfactor/action-assign-topics@v1.0
         with:
           input-file: integration-manifest.json
-          repo-token: ${{ secrets.GH_REPO_CONFIG}}
+          repo-token: ${{ secrets.token}}
       - name: Display type
         id: display
         run: |
