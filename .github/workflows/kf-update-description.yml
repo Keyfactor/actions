@@ -55,6 +55,6 @@ jobs:
             const descriptionText = '${{ steps.get_description.outputs.output-value}}'
             const response = await github.rest.repos.update({
               repo,
-              owner: context.repo.repo,
+              owner,
               description: descriptionText
             })
