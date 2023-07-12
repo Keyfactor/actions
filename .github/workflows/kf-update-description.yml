@@ -1,0 +1,60 @@
+name: Update repository description
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+        
+jobs:
+  get-repo-description:
+    name: Check the description for this Repository
+    runs-on: ubuntu-latest
+    outputs:
+      is-empty: ${{ steps.check_if_empty_description.outputs.is_empty }}
+    steps:
+      - name: Check if repo description is empty
+        id: check_if_empty_description
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // check existing description from manifest
+            const response = await github.request('GET /repos/{owner}/{repo}', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            })
+            const { description } = response.data
+            var IS_EMPTY=
+            (description.length > 0) ? IS_EMPTY='F' : IS_EMPTY='T'
+            core.exportVariable('IS_EMPTY', `${IS_EMPTY}`);
+            
+  update-repo-description:
+    name: Update the description for this Repository
+    needs: get-repo-description
+    if: ${{ needs.get-repo-description.outputs.is-empty}} != 'T'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repo-token: ${{ secrets.token}}
+      - name: Get description from manifest
+        id: get_description
+        uses: fiddlermikey/assign-from-json@v1.0
+        with:
+          input-file: 'integration-manifest.json'
+          input-property: 'description'
+
+      - name: Update repository description
+        id: update_description
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            const {repo, owner} = context.repo
+            const descriptionText = '${{ steps.get_description.outputs.output-value}}'
+            const response = await github.rest.repos.update({
+              repo,
+              owner,
+              description: descriptionText
+            })
