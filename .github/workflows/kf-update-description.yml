@@ -53,4 +53,4 @@ jobs:
           script: |
             // Debug consts here
             const repo = 'my test'
-            console.log(`repo:${repo} - org:${org} - owner:${owner} - description:${description-text}`)
+            console.log(`repo:${repo}`)
