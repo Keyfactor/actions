@@ -52,5 +52,5 @@ jobs:
           github-token: ${{ secrets.token }}
           script: |
             // Debug consts here
-            const {repo} = context.repo
-            console.log(`repo:${repo}`)
+            const {repo, owner} = context.repo
+            console.log(`repo:${repo} - owner:${owner}`)
