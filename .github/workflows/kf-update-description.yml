@@ -34,6 +34,10 @@ jobs:
     if: ${{ needs.get-repo-description.outputs.is-empty}} != 'T'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repo-token: ${{ secrets.token}}
       - name: Get description from manifest
         id: get_description
         uses: fiddlermikey/assign-from-json@v1.0
