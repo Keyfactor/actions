@@ -26,6 +26,7 @@ jobs:
             const { description } = response.data
             var IS_EMPTY=
             (description == '') ? IS_EMPTY='T' : IS_EMPTY='F'
+            console.log(`Empty description: ${ description }`)
             core.exportVariable('IS_EMPTY', `${IS_EMPTY}`);
             
   update-repo-description:
