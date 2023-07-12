@@ -56,8 +56,3 @@ jobs:
             // const org = context.repo.owner
             const org = owner
             console.log(`repo:${repo} - org:${org} - owner:${owner} - description:${description-text}`)
-            const response = await github.rest.repos.update({
-              owner,
-              repo,
-              description: description-text
-            })
