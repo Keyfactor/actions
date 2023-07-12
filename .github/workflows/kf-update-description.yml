@@ -52,10 +52,10 @@ jobs:
           github-token: ${{ secrets.token }}
           script: |
             const description-text = ${{ steps.get_description.outputs.output-value }}
-            const repo = context.repo.repo
-            const org = context.repo.owner
+            const {repo,org} = context.repo
+            // const org = context.repo.owner
             const owner = org
-            const response = await github.request('PATCH /repos/{owner}/{repo}', {
+            const response = await github.rest.repos.update({
               owner,
               repo,
               description: description-text
