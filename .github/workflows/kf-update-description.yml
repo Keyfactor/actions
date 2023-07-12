@@ -52,9 +52,9 @@ jobs:
           github-token: ${{ secrets.token }}
           script: |
             const description-text = ${{ steps.get_description.outputs.output-value }}
-            const {repo,org} = context.repo
+            const {repo,owner} = context.repo
             // const org = context.repo.owner
-            const owner = org
+            const org = owner
             console.log(`repo:${repo} - org:${org} - owner:${owner} - description:${description-text}`)
             const response = await github.rest.repos.update({
               owner,
