@@ -1,0 +1,22 @@
+name: Update Repo Settings
+on: [workflow_dispatch]
+
+jobs:
+  read_type:
+    runs-on: ubuntu-latest
+    name: A test job to read the integration_type from integration-manifest.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repo-token: ${{ secrets.GH_REPO_CONFIG}}
+      - name: Update topic from integration_type
+        id: update
+        uses: keyfactor/action-assign-topics@v1.0
+        with:
+          input-file: integration-manifest.json
+          repo-token: ${{ secrets.GH_REPO_CONFIG}}
+      - name: Display type
+        id: display
+        run: |
+          echo ${{ steps.read.output.dbg-out}}
