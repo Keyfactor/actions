@@ -39,6 +39,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           repo-token: ${{ secrets.token}}
+
+      - name: Debug if
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log('is empty?')
+            console.log(${{ needs.get-repo-description.outputs.is-empty}})
+
+
       - name: Get description from manifest
         id: get_description
         uses: fiddlermikey/assign-from-json@v1.0
