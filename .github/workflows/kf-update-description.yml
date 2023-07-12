@@ -28,7 +28,7 @@ jobs:
             
   update-repo-description:
     name: Update the description for this Repository
-    if: env.IS_EMPTY != 'T'
+    if: ${ env.IS_EMPTY } != 'T'
     runs-on: ubuntu-latest
     steps:
       - name: Get description from manifest
