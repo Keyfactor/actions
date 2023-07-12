@@ -51,9 +51,9 @@ jobs:
         with:
           github-token: ${{ secrets.token }}
           script: |
-            const description-text = ${{ steps.get_description.outputs.output-value }}
             const repo = 'my test'
             const owner = 'me'
+            const description-text = ${{ steps.get_description.outputs.output-value }}
             // const org = context.repo.owner
             const org = owner
             console.log(`repo:${repo} - org:${org} - owner:${owner} - description:${description-text}`)
