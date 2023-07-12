@@ -10,9 +10,11 @@ jobs:
   get-repo-description:
     name: Check the description for this Repository
     runs-on: ubuntu-latest
+    outputs:
+      is-empty: ${{ steps.check_if_empty_description.outputs.is_empty }}
     steps:
-      - name: Get description from manifest
-        id: get_description
+      - name: Check if repo description is empty
+        id: check_if_empty_description
         uses: actions/github-script@v6
         with:
           script: |
@@ -28,7 +30,8 @@ jobs:
             
   update-repo-description:
     name: Update the description for this Repository
-    if: ${ env.IS_EMPTY } != 'T'
+    needs: get-repo-description
+    if: ${{ needs.get-repo-description.outputs.is-empty}} != 'T'
     runs-on: ubuntu-latest
     steps:
       - name: Get description from manifest
