@@ -37,8 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Debug If
-        run: |
-          echo ${{needs.get-repo-description.outputs.is-empty}}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            console.log(`var - ${{needs.get-repo-description.outputs.is-empty}}`)
       - name: Checkout
         uses: actions/checkout@v3
         with:
