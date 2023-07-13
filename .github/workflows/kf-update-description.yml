@@ -33,9 +33,12 @@ jobs:
   update-repo-description:
     name: Update the description for this Repository
     needs: get-repo-description
-    if: needs.get-repo-description.outputs.is-empty == 'T'
+    #if: needs.get-repo-description.outputs.is-empty == 'T'
     runs-on: ubuntu-latest
     steps:
+      - name: Debug If
+        run: |
+          echo ${{needs.get-repo-description.outputs.is-empty}}
       - name: Checkout
         uses: actions/checkout@v3
         with:
