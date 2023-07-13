@@ -27,12 +27,12 @@ jobs:
             var IS_EMPTY=
             (description == '') ? IS_EMPTY='T' : IS_EMPTY='F'
             console.log(`Empty description: ${ IS_EMPTY }`)
-            core.exportVariable('IS_EMPTY', `${IS_EMPTY}`);
+            core.exportVariable('is_empty', `${IS_EMPTY}`);
             
   update-repo-description:
     name: Update the description for this Repository
     needs: get-repo-description
-    if: needs.get-repo-description.outputs.is-empty == T
+    if: needs.get-repo-description.outputs.is-empty == 'T'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
