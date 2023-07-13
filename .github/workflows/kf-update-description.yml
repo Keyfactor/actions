@@ -26,7 +26,7 @@ jobs:
             const { description } = response.data
             console.log(`description: ${ description }`)
             var IS_EMPTY=
-            (description == '') ? IS_EMPTY='T' : IS_EMPTY='F'
+            (description == null) ? IS_EMPTY='T' : IS_EMPTY='F'
             console.log(`Empty description: ${ IS_EMPTY }`)
             core.exportVariable('is_empty', `${IS_EMPTY}`);
             
