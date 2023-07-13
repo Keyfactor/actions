@@ -7,55 +7,21 @@ on:
         required: true
         
 jobs:
-  get-repo-description:
-    name: Check the description for this Repository
+  read_type:
     runs-on: ubuntu-latest
-    outputs:
-      is-empty: ${{ steps.check_if_empty_description.outputs.is_empty }}
-    steps:
-      - name: Check if repo description is empty
-        id: check_if_empty_description
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // check existing description from manifest
-            const response = await github.request('GET /repos/{owner}/{repo}', {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            })
-            const { description } = response.data
-            var IS_EMPTY=
-            (description == '') ? IS_EMPTY='T' : IS_EMPTY='F'
-            console.log(`Empty description: ${ description }`)
-            core.exportVariable('IS_EMPTY', `${IS_EMPTY}`);
-            
-  update-repo-description:
-    name: Update the description for this Repository
-    needs: get-repo-description
-    if: ${{ needs.get-repo-description.outputs.is-empty}} == 'T'
-    runs-on: ubuntu-latest
+    name: A CI job to read the description from integration-manifest.json
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           repo-token: ${{ secrets.token}}
-      - name: Get description from manifest
-        id: get_description
-        uses: fiddlermikey/assign-from-json@v1.0
+      - name: Update description from integration-manifest.json
+        id: update
+        uses: keyfactor/action-update-description@v1.0
         with:
-          input-file: 'integration-manifest.json'
-          input-property: 'description'
-
-      - name: Update repository description
-        id: update_description
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.token }}
-          script: |
-            const {repo, owner} = context.repo
-            const descriptionText = '${{ steps.get_description.outputs.output-value}}'
-            const response = await github.rest.repos.update({
-              repo,
-              owner,
-              description: descriptionText
-            })
+          input-file: integration-manifest.json
+          repo-token: ${{ secrets.token}}
+      - name: Display type
+        id: display
+        run: |
+          echo ${{ steps.read.output.dbg-out}}
