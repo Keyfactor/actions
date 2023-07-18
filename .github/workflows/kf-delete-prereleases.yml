@@ -16,5 +16,4 @@ jobs:
         id: delete
         uses: keyfactor/action-delete-prereleases@v1.0
         with:
-          input-file: integration-manifest.json
           repo-token: ${{ secrets.token}}
