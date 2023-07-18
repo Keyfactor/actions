@@ -27,6 +27,7 @@ jobs:
       integration_type: ${{ steps.read-type.outputs.output-value }}
       update_catalog: ${{ steps.read-update_catalog.outputs.output-value }}
       UOFramework: ${{ steps.read-UOFramework.outputs.output-value }}
+      description: ${{ steps.read-description.outputs.output-value }}
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: checkout-json-file
@@ -80,6 +81,13 @@ jobs:
         with:
           input-file: 'src/integration-manifest.json'
           input-property: 'release_dir'
+
+      - name: Read description property 
+        uses: ./tools
+        id: read-description
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'description'
 
       - name: Write variables to Summary
         id: adding-final-markdown
