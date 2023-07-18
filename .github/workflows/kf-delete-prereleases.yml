@@ -1,0 +1,20 @@
+name: Delete Prereleases
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+    
+
+jobs:
+  read_type:
+    runs-on: ubuntu-latest
+    name: A test job to delete prereleases from a repository
+    steps:
+      - name: Delete Prereleases
+        id: delete
+        uses: keyfactor/action-delete-prereleases@v1.0
+        with:
+          input-file: integration-manifest.json
+          repo-token: ${{ secrets.token}}
