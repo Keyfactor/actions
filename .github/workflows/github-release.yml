@@ -80,6 +80,7 @@ jobs:
             const state = pulls.data[0].state;
             const mergeSHA = pulls.data[0].merge_commit_sha;
             const targetBranchName = pulls.data[0].base.ref;
+            const PRNUM = pulls.data[0].id
             
             const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-'));
 
@@ -87,10 +88,11 @@ jobs:
             console.log(`mergeSHA: ${mergeSHA}`);
             console.log(`pushSHA: ${context.sha}`);
             console.log(`IS_RELEASE: ${IS_RELEASE}`);
+            console.log(`PRNUM: ${PRNUM}`);
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
-            core.exportVariable('PRNUM', `${pulls.data[0].id}`);
-            console.log(`PRNUM: ${PRNUM}`);
+            core.exportVariable('PRNUM', `${PRNUM}`);
+            
 
 
       - name: Get PR Commit Messages
