@@ -80,7 +80,7 @@ jobs:
             const state = pulls.data[0].state;
             const mergeSHA = pulls.data[0].merge_commit_sha;
             const targetBranchName = pulls.data[0].base.ref;
-            const PRNUM = pulls.data[0].id
+            const PRNUM = pulls.data[0].number
             
             const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-'));
 
