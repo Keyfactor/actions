@@ -89,7 +89,16 @@ jobs:
             console.log(`IS_RELEASE: ${IS_RELEASE}`);
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
+            core.exportVariable('PRNUM', `${pulls.data[0].id}`);
 
+
+      - name: Get PR Commit Messages
+        id: get_pr_commit_messages
+#        uses: keyfactor/action-create-release@upd-deprecated
+        uses: keyfactor/action-create-release@v3
+        with:
+          pr-number: ${{ env.PRNUM }}
+  
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
@@ -105,6 +114,7 @@ jobs:
             [Changelog](/./CHANGELOG.md) 
             [Readme](/./README.md) 
             For the latest README.md updates visit the [Main Page](/../main) for this repository
+            ${{ steps.get_pr_commit_messages.output.changelog-text}}
           draft: false
           prerelease: ${{ env.IS_PRE_RELEASE == 'True' }}
           prerelease_suffix: rc
