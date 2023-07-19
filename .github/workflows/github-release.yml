@@ -97,6 +97,7 @@ jobs:
         uses: keyfactor/action-list-prcommit-messages@v1.0
         with:
           pr-number: ${{ env.PRNUM }}
+          repo-token: ${{ secrets.GH_REPO_CONFIG}}
   
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
