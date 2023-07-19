@@ -94,8 +94,7 @@ jobs:
 
       - name: Get PR Commit Messages
         id: get_pr_commit_messages
-#        uses: keyfactor/action-create-release@upd-deprecated
-        uses: keyfactor/action-create-release@v3
+        uses: keyfactor/action-list-prcommit-messages@v1.0
         with:
           pr-number: ${{ env.PRNUM }}
   
