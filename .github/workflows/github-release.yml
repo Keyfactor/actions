@@ -90,6 +90,7 @@ jobs:
 
             core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
             core.exportVariable('PRNUM', `${pulls.data[0].id}`);
+            console.log(`PRNUM: ${PRNUM}`);
 
 
       - name: Get PR Commit Messages
