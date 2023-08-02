@@ -10,6 +10,9 @@ on:
         value: ${{ jobs.create-github-release.outputs.release_url }}
 
 jobs:
+  call-create-github-release-workflow:
+    uses: fiddlermikey/release-checks/.github/workflows/check-files.yml@main
+
   create-github-release:
     runs-on: windows-latest
     outputs:
