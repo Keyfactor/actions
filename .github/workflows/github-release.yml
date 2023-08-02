@@ -11,7 +11,7 @@ on:
 
 jobs:
   call-create-github-release-workflow:
-    uses: fiddlermikey/release-checks/.github/workflows/check-files.yml@main
+    uses: keyfactor/cpr-release-checks/.github/workflows/check-files.yml@main
 
   create-github-release:
     runs-on: windows-latest
