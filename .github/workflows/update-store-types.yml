@@ -18,4 +18,4 @@ jobs:
           token: ${{ secrets.SDK_SYNC_PAT }}
           repository: keyfactor/kfutil
           event-type: targetRepo-event
-          client-payload: '{"targetRepo": "${{github.repository}}"}' # This is the repository you want to update
+          client-payload: '{"targetRepo": "${{github.repository}},"targetRef": "${{github.ref}}""}' # This is the repository you want to update
