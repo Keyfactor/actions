@@ -95,7 +95,7 @@ jobs:
       - name: Display env
         id: display-env
         run: |
-          echo ${{env}}
+          set
       # Create a new release to auto-increment (or use manual version number)
       - name: Create new release
         id: create_release
