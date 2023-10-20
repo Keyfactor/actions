@@ -8,14 +8,6 @@ on:
       release_url:
         description: The upload URL for build artifacts for this release
         value: ${{ jobs.create-github-release.outputs.release_url }}
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - closed
-  push:
-    # branches:
-    #  - 'release-[0-9]*.[0-9]*'
 
 jobs:
   get-versions:
