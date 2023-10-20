@@ -147,7 +147,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
-        if: env.IS_PRE_RELEASE == 'True' || env.IS_RELEASE == 'true'
+        if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
         with:
           release_name: ${{ env.RELEASE_VERSION }}
           body: |
