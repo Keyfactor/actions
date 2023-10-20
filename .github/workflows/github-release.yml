@@ -117,6 +117,9 @@ jobs:
   create-github-release:
     needs: [get-versions, build-selector]
     if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+    outputs:
+      release_version: ${{ steps.create_release.outputs.current_tag }}
+      release_url: ${{ steps.create_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
       - run: |
