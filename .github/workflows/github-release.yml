@@ -114,7 +114,7 @@ jobs:
         run: |
           echo "Run a Full Release build on sha ${{ github.sha }} with delivery/release artifacts to final build num"
 
-  release-builds:
+  create-github-release:
     needs: [get-versions, build-selector]
     if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
     runs-on: ubuntu-latest
