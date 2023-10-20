@@ -25,7 +25,7 @@ jobs:
   dotnet-build-and-release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
@@ -53,6 +53,10 @@ jobs:
             $creatingRelease = ("${{ inputs.release_url }}".Trim().Length -gt 0) -and ("${{ inputs.release_dir }}".Trim().Length -gt 0)
             echo "Flagged to create release: ${creatingRelease}"
             echo "CREATE_RELEASE=${creatingRelease}" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}")
+            echo "Pre-release flagged: $($isPreRelease)"
+            echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
             dotnet nuget add source https://nuget.pkg.github.com/Keyfactor/index.json -n github -u ${{ github.actor }} -p ${{ secrets.token }} --store-password-in-clear-text
             nuget restore $slnPath -Project2ProjectTimeout 240
@@ -98,3 +102,63 @@ jobs:
           asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}.zip
           asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
+
+      - name: Trigger Sign Files Workflow
+        if: success() && env.CREATE_RELEASE == 'True'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: keyfactor/integration-codesigning
+          workflow: .github/workflows/sign-files.yml
+          ref: ${{ env.REPO_NAME}}
+
+ 
+## This might be better to move into its own reusable workflow called from this one
+
+#      - name: Create Pull Request to main
+#        if: success() && (env.IS_PRE_RELEASE == 'False')
+#        id: create-pr-to-main
+#        uses: peter-evans/create-pull-request@v5
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          commit-message: Create Post Release Merge from ${{ github.ref }} 
+#          committer: GitHub <noreply@github.com>
+#          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+#          signoff: false
+#          branch: ${{ github.ref }} 
+#          delete-branch: false
+#          title: '[Finalize] Reconcile ${{ github.ref }}'
+#          body: |
+#            Post release
+#            - Reconcile ${{ github.ref }} branch to main
+
+#          labels: |
+#            automated pr
+#          assignees: fiddlermikey
+#          reviewers: fiddlermikey
+#          draft: false
+
+## This might be better to move into its own reusable workflow called from this one
+
+#      - name: Create Pull Request to main
+#        if: success() && env.CREATE_RELEASE == 'True'
+#        id: create-pr-to-main
+#        uses: peter-evans/create-pull-request@v5
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          commit-message: Create Post Release Merge from ${{ github.ref }} 
+#          committer: GitHub <noreply@github.com>
+#          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+#          signoff: false
+#          branch: ${{ github.ref }} 
+#          delete-branch: false
+#          title: '[Finalize] Reconcile ${{ github.ref }}'
+#          body: |
+#            Post release
+#            - Reconcile ${{ github.ref }} branch to main
+
+#          labels: |
+#            automated pr
+#          assignees: fiddlermikey
+#          reviewers: fiddlermikey
+#          draft: false
