@@ -8,92 +8,138 @@ on:
       release_url:
         description: The upload URL for build artifacts for this release
         value: ${{ jobs.create-github-release.outputs.release_url }}
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - closed
+  push:
+    # branches:
+    #  - 'release-[0-9]*.[0-9]*'
 
 jobs:
-  call-create-github-release-workflow:
-    uses: keyfactor/cpr-release-checks/.github/workflows/check-files.yml@main
-
-  create-github-release:
-    runs-on: windows-latest
+  get-versions:
+    runs-on: ubuntu-latest
     outputs:
-      release_version: ${{ steps.create_release.outputs.current_tag }}
-      release_url: ${{ steps.create_release.outputs.upload_url }}
+      PR_BASE_REF: ${{ steps.set-outputs.outputs.PR_BASE_REF }}
+      PR_COMMIT_SHA: ${{ steps.set-outputs.outputs.PR_COMMIT_SHA }}
+      GITHUB_SHA: ${{ steps.set-outputs.outputs.GITHUB_SHA }}
+      PR_BASE_TAG: ${{ steps.set-outputs.outputs.PR_BASE_TAG }}
+      IS_FULL_RELEASE:  ${{ steps.set-outputs.outputs.IS_FULL_RELEASE }}
+      IS_PRE_RELEASE:  ${{ steps.set-outputs.outputs.IS_PRE_RELEASE }}
+      INC_LEVEL: ${{ steps.set-outputs.outputs.INC_LEVEL }}
+      IS_RELEASE_BRANCH: ${{ steps.set-outputs.outputs.IS_RELEASE_BRANCH }}
+      IS_HOTFIX: ${{ steps.find-latest-tag.outputs.IS_HOTFIX }}
+      LATEST_TAG: ${{ steps.find-latest-tag.outputs.LATEST_TAG }}
+      
+
     steps:
-      # determines values of repo name and major.minor release version from branch, and if build should be Releasor Pre-Release
-      # full release is run on on Push to a release- branch, and requires that branch protection prevent regular pushes from triggering a release
-      # there is no clear way to capture the 'pull_request' action closing with a merge when the calling workflow has a check for 'push' - the push of the merge is captured and not the pull_request closing
-      - name: Get release values from workflow state
+      - name: Check out the code
+        uses: actions/checkout@v3
+
+      - name: Display base.ref from Pull Request
+        if: github.event_name == 'pull_request'
+        id: display-from-pr
         run: |
-            $repoName = "${{ github.repository }}".Split("/")
-            echo "Repo Name: $($repoName[-1])"
-            echo "REPO_NAME=$($repoName[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "Event: ${{ github.event_name }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo "Event Action: ${{ github.event.action }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo "PR_BASE_REF=${{ github.event.pull_request.base.ref }}" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
+          echo "PR_STATE=${{ github.event.pull_request.state }}" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
+          echo "PR_MERGED=${{ github.event.pull_request.merged }}" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
+          echo "PR_COMMIT_SHA=${{ github.event.pull_request.merge_commit_sha }}" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
+          echo "GITHUB_SHA=${{ github.sha }}" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
+          baseref="${{ github.event.pull_request.base.ref }}"
+          basetag="${baseref#release-}"
+          echo "PR_BASE_TAG=$basetag" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY
 
-            $relVersion = "${{ github.base_ref }}".Split("-")
-            echo "Release Version: $($relVersion[-1])"
-            echo "RELEASE_VERSION=$($relVersion[-1])" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
-            $isPreRelease = "${{ github.base_ref }}".StartsWith("release-") -and [System.Convert]::ToBoolean("${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}")
-            echo "Pre-release flagged: $($isPreRelease)"
-            echo "IS_PRE_RELEASE=$($isPreRelease)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
-      # checks if pre-release patch version can be determined from existing release tags or if we start at 0
-      - name: GitHub Script checks for existing version tags
-        id: existing_version
-        uses: actions/github-script@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_NUMBER: ${{ env.RELEASE_VERSION }}
-        if: env.IS_PRE_RELEASE == 'True'
-        with:
-          script: |
-            // check for existing tags on this major.minor version
-            const tagsList = await github.rest.git.listMatchingRefs({
-             owner: context.repo.owner,
-             repo: context.repo.repo,
-             ref: 'tags'
-            });
-            
-            const { VERSION_NUMBER } = process.env;
-            const tags = tagsList.data.reverse();
-            
-            // assume linear release pattern - i.e. always working on latest major.minor version
-            // if there are no tags, or latest tag does not start with VERSION_NUMBER, set a manual version for release
-            if (tags.length < 1
-                || !tags.shift().ref.startsWith(`refs/tags/${VERSION_NUMBER}`)) {
-              core.exportVariable('MANUAL_VERSION', `${VERSION_NUMBER}.0-rc.0`);
-            }
-            
-      # if not a pre release, check if there is a pull request that has closed + merged with the commit SHA of this push
-      - name: GitHub Script checks for merged pull request
-        id: merged_pull_request
-        uses: actions/github-script@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Display base_ref from Push Event
         if: github.event_name == 'push'
+        id: display-from-push
+        run: |
+          echo "Branch Ref: ${{ github.ref }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo "Event: ${{ github.event_name }}" | tee -a $GITHUB_STEP_SUMMARY
+          echo "github.sha: ${{ github.sha }}" | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: Find Latest Tag
+        if: github.event_name == 'pull_request'
+        id: find-latest-tag
+        run: |
+          latestTag=`git fetch --tags && git tag --sort=-v:refname | grep ${{ env.PR_BASE_TAG }} | head -n 1`
+          echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_OUTPUT"
+          hf=$( [ "${{ env.PR_BASE_TAG }}" = "$latestTag" ] && echo "True" || echo "False" )
+          echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Display PR_BASE_REF
+        if: github.event_name == 'pull_request'
+        id: set-outputs
+        run: |
+          echo "PR_BASE_REF=${{ env.PR_BASE_REF }}" | tee -a "$GITHUB_OUTPUT"
+          echo "PR_STATE=${{ env.PR_STATE }}"
+          echo "PR_MERGED=${{ env.PR_MERGED }}"
+          if [[ "${{ env.PR_STATE }}" == "closed" && "${{ env.PR_MERGED }}" == "true" && "${{ env.PR_COMMIT_SHA }}" == "${{ env.GITHUB_SHA }}" ]]; then
+            echo "IS_FULL_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
+            echo "INC_LEVEL=patch" | tee -a "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ env.PR_STATE }}" == "open" ]]; then
+            echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ env.PR_BASE_REF }}" == "release-"* ]]; then
+            echo "IS_RELEASE_BRANCH=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+          fi
+          echo "PR_COMMIT_SHA=${{ env.PR_COMMIT_SHA }}" | tee -a "$GITHUB_OUTPUT"
+          echo "GITHUB_SHA=${{ env.GITHUB_SHA }}" | tee -a "$GITHUB_OUTPUT"
+          echo "PR_BASE_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
+
+  build-selector:
+    needs: get-versions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Just Run Build on Push
+        if: github.event_name == 'push'
+        id: push-build
+        run: |
+          echo "Just run a build on sha ${{ github.sha }} with no delivery/release artifacts"
+
+      - name: Create Prerelease Candidate Build
+        if: needs.get-versions.outputs.IS_PRE_RELEASE == 'True'
+        id: prerelease-build
+        run: |
+          echo "Just run a prerelease build on sha ${{ github.sha }} with delivery/release artifacts to .rc"
+          
+      - name: Create Release Build
+        if: needs.get-versions.outputs.IS_FULL_RELEASE == 'True'
+        id: full-release-build
+        run: |
+          echo "Run a Full Release build on sha ${{ github.sha }} with delivery/release artifacts to final build num"
+
+  release-builds:
+    needs: [get-versions, build-selector]
+    if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "INC_LEVEL=${{ needs.get-versions.outputs.INC_LEVEL}}"
+      - name: Check if initial release
+        if:  needs.get-versions.outputs.LATEST_TAG == ''        
+        run: |
+          echo "INITIAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_STEP_SUMMARY" | tee -a "$GITHUB_ENV"
+          echo "MANUAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_ENV"
+      - name: Set semver info
+        id: set-semver-info
+        if:  needs.get-versions.outputs.LATEST_TAG != ''        
+        uses: fiddlermikey/action-bump-semver@main
         with:
-          script: |
-            // get all pull requests for this repo
-            const pulls = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed'
-            });
-
-            // get the state of the latest pull request for this repo
-            const state = pulls.data[0].state;
-            const mergeSHA = pulls.data[0].merge_commit_sha;
-            const targetBranchName = pulls.data[0].base.ref;
-            
-            const IS_RELEASE = (state == 'closed') && (mergeSHA == context.sha) && (targetBranchName.startsWith('release-'));
-
-            console.log(`State: ${state}`);
-            console.log(`mergeSHA: ${mergeSHA}`);
-            console.log(`pushSHA: ${context.sha}`);
-            console.log(`IS_RELEASE: ${IS_RELEASE}`);
-
-            core.exportVariable('IS_RELEASE', `${IS_RELEASE}`);
-
-      # Create a new release to auto-increment (or use manual version number)
+          current_version: ${{ needs.get-versions.outputs.LATEST_TAG}}
+          level: ${{ needs.get-versions.outputs.INC_LEVEL}}
+          preID: rc
+      - name: Show next sem-version
+        if:  needs.get-versions.outputs.LATEST_TAG != ''        
+        run: |
+          echo "MANUAL_VERSION=${{ steps.set-semver-info.outputs.new_version }}" > "$GITHUB_ENV"
+      - run: |
+          echo "Next version: ${{ env.MANUAL_VERSION }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Create new release
         id: create_release
 #        uses: keyfactor/action-create-release@upd-deprecated
