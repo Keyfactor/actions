@@ -24,8 +24,8 @@ jobs:
       IS_PRE_RELEASE:  ${{ steps.set-outputs.outputs.IS_PRE_RELEASE }}
       INC_LEVEL: ${{ steps.set-outputs.outputs.INC_LEVEL }}
       IS_RELEASE_BRANCH: ${{ steps.set-outputs.outputs.IS_RELEASE_BRANCH }}
-      IS_HOTFIX: ${{ steps.find-latest-tag.outputs.IS_HOTFIX }}
-      LATEST_TAG: ${{ steps.find-latest-tag.outputs.LATEST_TAG }}
+      IS_HOTFIX: ${{ steps.set-outputs.outputs.IS_HOTFIX }}
+      LATEST_TAG: ${{ steps.set-outputs.outputs.LATEST_TAG }}
       
 
     steps:
@@ -59,12 +59,24 @@ jobs:
         if: github.event_name == 'pull_request'
         id: find-latest-tag
         run: |
-          latestTag=`git fetch --tags && git tag --sort=-v:refname | grep ${{ env.PR_BASE_TAG }} | head -n 1`
-          echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_OUTPUT"
-          hf=$( [ "${{ env.PR_BASE_TAG }}" = "$latestTag" ] && echo "True" || echo "False" )
-          echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_OUTPUT"
+          git fetch --tags
+          allBranchTags=`git tag --sort=-v:refname | grep ${{ env.PR_BASE_TAG }}`
+          allRepoTags=`git tag --sort=-v:refname | head -n 1`
+          branchTagBase=$(echo "${allBranchTags[@]}" | grep -o '^[0-9.]*' | head -n 1)
+          latestTagBase=$(echo "${allRepoTags[@]}" | grep -o '^[0-9.]*' | head -n 1)
+          # If the *TagBase values are not found in the list of tags it means no final release was produced and the latest*Tag vars will be empty
+          latestBranchTag=`printf "%s\n" "${allBranchTags[@]}" | grep "^$branchTagBase$" | head -n 1`
+          latestReleasedTag=`printf "%s\n" "${allRepoTags[@]}" | grep "^$latestTagBase$" | head -n 1`
+          if [[ "$latestReleasedTag" == "" ]]; then
+            $latestTag=$latestBranchTag;
+          else
+            $latestTag=$latestReleaseTag
+          fi
+          echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_ENV"
+          hf=$( [ "branchTagBase" != "$latestTagBase" ] && echo "True" || echo "False" )
+          echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_ENV"
 
-      - name: Display PR_BASE_REF
+      - name: Set Outputs
         if: github.event_name == 'pull_request'
         id: set-outputs
         run: |
@@ -85,6 +97,8 @@ jobs:
           echo "PR_COMMIT_SHA=${{ env.PR_COMMIT_SHA }}" | tee -a "$GITHUB_OUTPUT"
           echo "GITHUB_SHA=${{ env.GITHUB_SHA }}" | tee -a "$GITHUB_OUTPUT"
           echo "PR_BASE_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
+          echo "IS_HOTFIX=${{ env.IS_HOTFIX }}" | tee -a "$GITHUB_OUTPUT"
+          echo "LATEST_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   build-selector:
     needs: get-versions
