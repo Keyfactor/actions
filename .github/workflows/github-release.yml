@@ -9,6 +9,7 @@ on:
         description: The upload URL for build artifacts for this release
         value: ${{ jobs.create-github-release.outputs.release_url }}
   pull_request:
+    types: [opened, closed, synchronize]
   push:
 
 jobs:
@@ -88,6 +89,8 @@ jobs:
   build-selector:
     needs: get-versions
     runs-on: ubuntu-latest
+    outputs:
+      EVENT_TYPE: ${{ steps.set-outputs.outputs.EVENT_TYPE }}
 
     steps:
       - name: Just Run Build on Push
@@ -95,18 +98,21 @@ jobs:
         id: push-build
         run: |
           echo "Just run a build on sha ${{ github.sha }} with no delivery/release artifacts"
+          echo "EVENT_TYPE=push" | tee -a $GITHUB_OUTPUT
 
       - name: Create Prerelease Candidate Build
         if: needs.get-versions.outputs.IS_PRE_RELEASE == 'True'
         id: prerelease-build
         run: |
           echo "Just run a prerelease build on sha ${{ github.sha }} with delivery/release artifacts to .rc"
+          echo "EVENT_TYPE=pull_request" | tee -a $GITHUB_OUTPUT
           
       - name: Create Release Build
         if: needs.get-versions.outputs.IS_FULL_RELEASE == 'True'
         id: full-release-build
         run: |
           echo "Run a Full Release build on sha ${{ github.sha }} with delivery/release artifacts to final build num"
+          echo "EVENT_TYPE=pull_request" | tee -a $GITHUB_OUTPUT
 
   create-github-release:
     needs: [get-versions, build-selector]
