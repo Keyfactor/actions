@@ -98,7 +98,7 @@ jobs:
           echo "GITHUB_SHA=${{ env.GITHUB_SHA }}" | tee -a "$GITHUB_OUTPUT"
           echo "PR_BASE_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
           echo "IS_HOTFIX=${{ env.IS_HOTFIX }}" | tee -a "$GITHUB_OUTPUT"
-          echo "LATEST_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
+          echo "LATEST_TAG=${{ env.LATEST_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   build-selector:
     needs: get-versions
