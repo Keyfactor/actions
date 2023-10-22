@@ -59,6 +59,7 @@ jobs:
         if: github.event_name == 'pull_request'
         id: find-latest-tag
         run: |
+          prbasetag=${{env.PR_BASE_TAG}}
           git fetch --tags
           allBranchTags=`git tag --sort=-v:refname | grep $prbasetag`
           allRepoTags=`git tag --sort=-v:refname`
