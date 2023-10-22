@@ -108,7 +108,7 @@ jobs:
           echo "LATEST_TAG=${{ env.LATEST_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   create-github-release:
-    needs: [get-versions, build-selector]
+    needs: get-versions
     if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
     outputs:
       release_version: ${{ steps.create_release.outputs.current_tag }}
