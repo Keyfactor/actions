@@ -62,11 +62,9 @@ jobs:
           git fetch --tags
           allBranchTags=`git tag --sort=-v:refname | grep $prbasetag`
           allRepoTags=`git tag --sort=-v:refname`
-          branchTagBase=`echo "${allBranchTags[@]}" | grep -o '^[0-9.]*' | head -n 1`
-          latestTagBase=`echo "${allRepoTags[@]}" | grep -o '^[0-9.]*' | head -n 1`
+          branchTagBase=`git tag --sort=-v:refname | grep $prbasetag | grep -o '^[0-9.]*' | head -n 1`
+          latestTagBase=`git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -n 1`
           # If the *TagBase values are not found in the list of tags it means no final release was produced and the latest*Tag vars will be empty
-          latestBranchTag=`printf "%s\n" "${allBranchTags[@]}" | grep "^$branchTagBase" | head -n 1`
-          latestReleasedTag=`printf "%s\n" "${allRepoTags[@]}" | grep "^$latestTagBase$" | head -n 1`
           if [[ "$latestReleasedTag" == "" ]]; then
             latestTag=$latestBranchTag;
           else
