@@ -66,7 +66,7 @@ jobs:
           branchTagBase=`git tag --sort=-v:refname | grep $prbasetag | grep -o '^[0-9.]*' | head -n 1`
           latestTagBase=`git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -n 1`
           latestBranchTag=`git tag --sort=-v:refname | grep $prbasetag | grep "^$branchTagBase" | head -n 1`
-          latestReleasedTag=`git tag --sort=-v:refname | grep $prbasetag | grep "^$latestTagBase$" | head -n 1`
+          latestReleasedTag=`git tag --sort=-v:refname | grep $prbasetag | grep "^$branchTagBase$" | head -n 1`
           # If the *TagBase values are not found in the list of tags it means no final release was produced and the latest*Tag vars will be empty
           if [[ "$latestReleasedTag" == "" ]]; then
             latestTag=$latestBranchTag;
