@@ -83,33 +83,29 @@ jobs:
           # dispatching the create-release action, but it is not *yet* a configurable option
           echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_ENV"
 
-  build-selector:
-    needs: get-versions
-    runs-on: ubuntu-latest
-    outputs:
-      EVENT_TYPE: ${{ steps.set-outputs.outputs.EVENT_TYPE }}
-
-    steps:
-      - name: Just Run Build on Push
-        if: github.event_name == 'push'
-        id: push-build
+      - name: Set Outputs
+        if: github.event_name == 'pull_request'
+        id: set-outputs
         run: |
-          echo "Just run a build on sha ${{ github.sha }} with no delivery/release artifacts"
-          echo "EVENT_TYPE=push" | tee -a $GITHUB_OUTPUT
-
-      - name: Create Prerelease Candidate Build
-        if: needs.get-versions.outputs.IS_PRE_RELEASE == 'True'
-        id: prerelease-build
-        run: |
-          echo "Just run a prerelease build on sha ${{ github.sha }} with delivery/release artifacts to .rc"
-          echo "EVENT_TYPE=pull_request" | tee -a $GITHUB_OUTPUT
-          
-      - name: Create Release Build
-        if: needs.get-versions.outputs.IS_FULL_RELEASE == 'True'
-        id: full-release-build
-        run: |
-          echo "Run a Full Release build on sha ${{ github.sha }} with delivery/release artifacts to final build num"
-          echo "EVENT_TYPE=pull_request" | tee -a $GITHUB_OUTPUT
+          echo "PR_BASE_REF=${{ env.PR_BASE_REF }}" | tee -a "$GITHUB_OUTPUT"
+          echo "PR_STATE=${{ env.PR_STATE }}"
+          echo "PR_MERGED=${{ env.PR_MERGED }}"
+          if [[ "${{ env.PR_STATE }}" == "closed" && "${{ env.PR_MERGED }}" == "true" && "${{ env.PR_COMMIT_SHA }}" == "${{ env.GITHUB_SHA }}" ]]; then
+            echo "IS_FULL_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
+            echo "INC_LEVEL=patch" | tee -a "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ env.PR_STATE }}" == "open" ]]; then
+            echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ env.PR_BASE_REF }}" == "release-"* ]]; then
+            echo "IS_RELEASE_BRANCH=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+          fi
+          echo "PR_COMMIT_SHA=${{ env.PR_COMMIT_SHA }}" | tee -a "$GITHUB_OUTPUT"
+          echo "GITHUB_SHA=${{ env.GITHUB_SHA }}" | tee -a "$GITHUB_OUTPUT"
+          echo "PR_BASE_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
+          echo "IS_HOTFIX=${{ env.IS_HOTFIX }}" | tee -a "$GITHUB_OUTPUT"
+          echo "LATEST_TAG=${{ env.LATEST_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   create-github-release:
     needs: [get-versions, build-selector]
