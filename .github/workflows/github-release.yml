@@ -60,12 +60,12 @@ jobs:
         id: find-latest-tag
         run: |
           git fetch --tags
-          allBranchTags=`git tag --sort=-v:refname | grep ${{ env.PR_BASE_TAG }}`
-          allRepoTags=`git tag --sort=-v:refname | head -n 1`
-          branchTagBase=$(echo "${allBranchTags[@]}" | grep -o '^[0-9.]*' | head -n 1)
-          latestTagBase=$(echo "${allRepoTags[@]}" | grep -o '^[0-9.]*' | head -n 1)
+          allBranchTags=`git tag --sort=-v:refname | grep $prbasetag`
+          allRepoTags=`git tag --sort=-v:refname`
+          branchTagBase=`echo "${allBranchTags[@]}" | grep -o '^[0-9.]*' | head -n 1`
+          latestTagBase=`echo "${allRepoTags[@]}" | grep -o '^[0-9.]*' | head -n 1`
           # If the *TagBase values are not found in the list of tags it means no final release was produced and the latest*Tag vars will be empty
-          latestBranchTag=`printf "%s\n" "${allBranchTags[@]}" | grep "^$branchTagBase$" | head -n 1`
+          latestBranchTag=`printf "%s\n" "${allBranchTags[@]}" | grep "^$branchTagBase" | head -n 1`
           latestReleasedTag=`printf "%s\n" "${allRepoTags[@]}" | grep "^$latestTagBase$" | head -n 1`
           if [[ "$latestReleasedTag" == "" ]]; then
             latestTag=$latestBranchTag;
@@ -73,7 +73,13 @@ jobs:
             latestTag=$latestReleaseTag
           fi
           echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_ENV"
-          hf=$( [ "branchTagBase" != "$latestTagBase" ] && echo "True" || echo "False" )
+          if [[ "$latestTagBase" == *"$branchTagBase" ]]; then
+              hf="False"
+          else
+              hf="True"
+          fi
+          # The intention is to use this to set the make_latest:false property when 
+          # dispatching the create-release action, but it is not *yet* a configurable option
           echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_ENV"
 
       - name: Set Outputs
