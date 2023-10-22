@@ -67,12 +67,6 @@ jobs:
           latestTagBase=`git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -n 1`
           latestBranchTag=`git tag --sort=-v:refname | grep $prbasetag | grep "^$branchTagBase" | head -n 1`
           latestReleasedTag=`git tag --sort=-v:refname | grep $prbasetag | grep "^$latestTagBase$" | head -n 1`
-          echo  allBranchTags $allBranchTags
-          echo  allRepoTags $allRepoTags 
-          echo  branchTagBase $branchTagBase
-          echo  latestTagBase $latestTagBase
-          echo  latestBranchTag $latestBranchTag
-          echo  latestReleasedTag $latestReleasedTag
           # If the *TagBase values are not found in the list of tags it means no final release was produced and the latest*Tag vars will be empty
           if [[ "$latestReleasedTag" == "" ]]; then
             latestTag=$latestBranchTag;
@@ -88,30 +82,6 @@ jobs:
           # The intention is to use this to set the make_latest:false property when 
           # dispatching the create-release action, but it is not *yet* a configurable option
           echo "IS_HOTFIX=$hf" | tee -a "$GITHUB_ENV"
-
-      - name: Set Outputs
-        if: github.event_name == 'pull_request'
-        id: set-outputs
-        run: |
-          echo "PR_BASE_REF=${{ env.PR_BASE_REF }}" | tee -a "$GITHUB_OUTPUT"
-          echo "PR_STATE=${{ env.PR_STATE }}"
-          echo "PR_MERGED=${{ env.PR_MERGED }}"
-          if [[ "${{ env.PR_STATE }}" == "closed" && "${{ env.PR_MERGED }}" == "true" && "${{ env.PR_COMMIT_SHA }}" == "${{ env.GITHUB_SHA }}" ]]; then
-            echo "IS_FULL_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
-            echo "INC_LEVEL=patch" | tee -a "$GITHUB_OUTPUT"
-          fi
-          if [[ "${{ env.PR_STATE }}" == "open" ]]; then
-            echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
-          fi
-          if [[ "${{ env.PR_BASE_REF }}" == "release-"* ]]; then
-            echo "IS_RELEASE_BRANCH=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-          fi
-          echo "PR_COMMIT_SHA=${{ env.PR_COMMIT_SHA }}" | tee -a "$GITHUB_OUTPUT"
-          echo "GITHUB_SHA=${{ env.GITHUB_SHA }}" | tee -a "$GITHUB_OUTPUT"
-          echo "PR_BASE_TAG=${{ env.PR_BASE_TAG }}" | tee -a "$GITHUB_OUTPUT"
-          echo "IS_HOTFIX=${{ env.IS_HOTFIX }}" | tee -a "$GITHUB_OUTPUT"
-          echo "LATEST_TAG=${{ env.LATEST_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   build-selector:
     needs: get-versions
