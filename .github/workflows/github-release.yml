@@ -71,7 +71,7 @@ jobs:
           if [[ "$latestReleasedTag" == "" ]]; then
             latestTag=$latestBranchTag;
           else
-            latestTag=$latestReleaseTag
+            latestTag=$latestReleasedTag
           fi
           echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_ENV"
           if [[ "$latestTagBase" == *"$branchTagBase" ]]; then
