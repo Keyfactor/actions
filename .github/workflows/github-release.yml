@@ -68,9 +68,9 @@ jobs:
           latestBranchTag=`printf "%s\n" "${allBranchTags[@]}" | grep "^$branchTagBase$" | head -n 1`
           latestReleasedTag=`printf "%s\n" "${allRepoTags[@]}" | grep "^$latestTagBase$" | head -n 1`
           if [[ "$latestReleasedTag" == "" ]]; then
-            $latestTag=$latestBranchTag;
+            latestTag=$latestBranchTag;
           else
-            $latestTag=$latestReleaseTag
+            latestTag=$latestReleaseTag
           fi
           echo "LATEST_TAG=${latestTag}"  | tee -a "$GITHUB_ENV"
           hf=$( [ "branchTagBase" != "$latestTagBase" ] && echo "True" || echo "False" )
