@@ -13,6 +13,8 @@ on:
   push:
 
 jobs:
+  call-create-github-release-workflow:
+    uses: keyfactor/cpr-release-checks/.github/workflows/check-files.yml@main
   get-versions:
     runs-on: ubuntu-latest
     outputs:
