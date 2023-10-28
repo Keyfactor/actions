@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.SDK_SYNC_PAT}}
       - name: Read primary language
         id: read
         uses: fiddlermikey/action-get-primary-language@v1.0
