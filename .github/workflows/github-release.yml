@@ -63,6 +63,7 @@ jobs:
         run: |
           prbasetag=${{env.PR_BASE_TAG}}
           git fetch --tags
+          echo Setting vars
           allBranchTags=`git tag --sort=-v:refname | grep $prbasetag`
           echo $allBranchTags
           allRepoTags=`git tag --sort=-v:refname`
