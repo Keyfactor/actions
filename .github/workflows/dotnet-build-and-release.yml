@@ -102,13 +102,3 @@ jobs:
           asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}.zip
           asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
-
-      - name: Trigger Sign Files Workflow
-        if: success() && env.CREATE_RELEASE == 'True'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: keyfactor/integration-codesigning
-          workflow: .github/workflows/sign-files.yml
-          ref: ${{ env.REPO_NAME}}
-
