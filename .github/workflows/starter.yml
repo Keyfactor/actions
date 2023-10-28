@@ -56,7 +56,7 @@ jobs:
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
 
     secrets: 
-      token: ${{ secrets.SDK_SYNC_PAT }}
+      token: ${{ secrets.token }}
 
   call-go-build-and-tag-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
