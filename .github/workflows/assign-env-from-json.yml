@@ -92,10 +92,11 @@ jobs:
       - name: Write variables to Summary
         id: adding-final-markdown
         run: |
-          echo "###  ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
-          echo "###  ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "###  Integration Manifest Properties:" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "* ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
 
 
