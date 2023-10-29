@@ -61,7 +61,7 @@ jobs:
         if: github.event_name == 'pull_request'
         id: find-latest-tag
         run: |
-          prbasetag=${{env.PR_BASE_TAG}}
+          prbasetag="${{env.PR_BASE_TAG}}"
           git fetch --tags
           if [[ -n $(git tag) ]]; then
             echo "Setting vars"
