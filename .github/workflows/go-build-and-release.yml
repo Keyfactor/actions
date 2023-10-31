@@ -1,0 +1,11 @@
+name: Go build placeholder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-starter-workflow:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Go Build Placeholder
+      run: echo "Go Build Placeholder"
