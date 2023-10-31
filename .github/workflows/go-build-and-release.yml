@@ -1,7 +1,7 @@
 name: Go build placeholder
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   call-starter-workflow:
