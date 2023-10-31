@@ -2,6 +2,24 @@ name: Go build placeholder
 
 on:
   workflow_call:
+    inputs:
+      release_version:
+        description: The release version to use when publishing a build
+        required: false
+        type: string
+        default: 1.0.0 # for non-released builds
+      release_url:
+        description: The url to upload a publsihed release
+        required: false # leave empty for non-release build
+        type: string
+      release_dir:
+        description: The relative directory inside the repo where the build artifacts to publish for release will be located
+        required: false # leave empty for non-release build
+        type: string
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access private packages'
+        required: true
 
 jobs:
   call-starter-workflow:
