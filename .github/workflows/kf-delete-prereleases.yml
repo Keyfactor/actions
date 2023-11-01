@@ -21,7 +21,3 @@ jobs:
         uses: keyfactor/action-delete-prereleases@v1.0
         with:
           repo-token: ${{ secrets.token}}
-      - name: Display type
-        id: display
-        run: |
-          echo ${{ steps.run-delete.output.repo-names}}
