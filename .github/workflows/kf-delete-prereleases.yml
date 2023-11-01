@@ -18,7 +18,7 @@ jobs:
           token: ${{ secrets.token}}
       - name: Run delete-prereleases action
         id: run-delete
-        uses: keyfactor/action-delete-prereleases@dev
+        uses: keyfactor/action-delete-prereleases@v1.0
         with:
           repo-token: ${{ secrets.token}}
       - name: Display type
