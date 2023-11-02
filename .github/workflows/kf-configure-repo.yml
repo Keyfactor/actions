@@ -47,7 +47,6 @@ jobs:
       with:
         repository: keyfactor/action-set-branch-protection
         path: my-tools
-        ref: v1
         token: ${{ secrets.token}}
     - name: Update the branch protection in this repository for ${{ github.event.ref}}
       id: update
