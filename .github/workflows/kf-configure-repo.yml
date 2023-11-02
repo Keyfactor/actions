@@ -40,7 +40,7 @@ jobs:
           token: ${{ secrets.token}}
   configure_branch:
     runs-on: ubuntu-latest
-    name: Checkout the private action
+    name: Configure branch protection
     steps:
     - name: Checkout tools repo
       uses: actions/checkout@v4
