@@ -71,7 +71,7 @@ jobs:
       token: ${{ secrets.SDK_SYNC_PAT }}
 
   call-repository-configuration-workflow:
-    if: github.event_name == 'create'
+    if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@release-2.1
     secrets: 
       token: ${{ secrets.token }}
