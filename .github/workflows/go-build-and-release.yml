@@ -22,8 +22,16 @@ on:
         required: true
 
 jobs:
-  call-starter-workflow:
+  call-go-prerelease-workflow:
+    if: env.CREATE_RELEASE != 'True'
     runs-on: ubuntu-latest
     steps:
-    - name: Go Build Placeholder
-      run: echo "Go Build Placeholder"
+    - name: Go Build Prerelease Placeholder
+      run: echo "Go Build Prerelease Placeholder"
+
+  call-go-release-workflow:
+    if: env.CREATE_RELEASE == 'True'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Go Build Release Placeholder
+      run: echo "Go Build Release Placeholder"
