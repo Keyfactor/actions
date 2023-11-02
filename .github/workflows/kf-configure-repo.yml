@@ -27,12 +27,12 @@ jobs:
         id: update-topic
         uses: keyfactor/action-assign-topics@v1.0
         with:
-          token: ${{ secrets.token}}
+          repo-token: ${{ secrets.token}}
       - name: Update description from manifest
         id: update-description
         uses: keyfactor/action-update-description@v1.0
         with:
-          token: ${{ secrets.token}}
+          repo-token: ${{ secrets.token}}
       - name: Update teams for non keyfactor-customer-private repos
         id: update-teams
         uses: keyfactor/action-gh-teams-update@v1.0
