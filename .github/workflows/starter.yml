@@ -11,7 +11,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@release-2.1
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v2
 
   call-get-primary-language:
     outputs:
@@ -34,12 +34,12 @@ jobs:
           echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@release-2.1
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@release-2.1
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v2
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -50,7 +50,7 @@ jobs:
   call-go-build-and-tag-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go'
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@release-2.1
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -72,14 +72,14 @@ jobs:
 
   call-repository-configuration-workflow:
     if: github.event_name == 'create'
-    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@release-2.1
+    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v2
     secrets: 
       token: ${{ secrets.token }}
 
   #call-post-release-cleanup-workflow:
   #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
   #  if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-  #  uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@release-2.1
+  #  uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v2
   #  secrets: 
   #    token: ${{ secrets.token }}
 
