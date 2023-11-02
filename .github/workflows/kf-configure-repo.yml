@@ -13,10 +13,6 @@ on:
       token:
         description: 'Secret token from caller workflow to access repo'
         required: true
-  create:
-    branches:
-      - 'release-*.*'
-
 
 jobs:
   configure_repo:
