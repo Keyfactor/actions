@@ -28,10 +28,8 @@ jobs:
       - name: get-is-release
         run: |
           if [[ ""="${{inputs.release_version}}" ]]; then
-            echo "IS_RELEASE=True" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY;
             echo "GO_ARGS=--skip-publish" | tee -a "$GITHUB_ENV" 
           else
-            echo "IS_RELEASE=False" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY;
             echo "GO_ARGS=" | tee -a "$GITHUB_ENV" 
           fi
       - name: Run GoReleaser
