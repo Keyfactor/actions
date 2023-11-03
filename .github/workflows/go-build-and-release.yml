@@ -8,14 +8,6 @@ on:
         required: false
         type: string
         default: 1.0.0 # for non-released builds
-      release_url:
-        description: The url to upload a publsihed release
-        required: false # leave empty for non-release build
-        type: string
-      release_dir:
-        description: The relative directory inside the repo where the build artifacts to publish for release will be located
-        required: false # leave empty for non-release build
-        type: string
     secrets:
       token:
         description: 'Secret token from caller workflow to access private packages'
@@ -23,11 +15,33 @@ on:
 
 jobs:
   call-go-prerelease-workflow:
-    if: inputs.release_version == ''
     runs-on: ubuntu-latest
     steps:
-    - name: Go Build Prerelease Placeholder
-      run: echo "Go Build Prerelease Placeholder"
+      - uses: actions/checkout@v3
+        with:
+          # Allow goreleaser to access older tag information.
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: get-is-release
+        run: |
+          if [[ -z ${{inputs.release_version}}]]; then
+            echo "IS_RELEASE=True" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY;
+            echo "GO_ARGS=--skip-publish" | tee -a "$GITHUB_ENV" 
+          else
+            echo "IS_RELEASE=False" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY;
+            echo "GO_ARGS=" | tee -a "$GITHUB_ENV" 
+          fi
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          args: ${{ env.GO_ARGS }}
+        env:
+          # GitHub sets the GITHUB_TOKEN secret automatically.
+          GITHUB_TOKEN: ${{ secrets.token }}
+          PAT_TOKEN: ${{ secrets.token }}
 
   call-go-release-workflow:
     if: inputs.release_version != ''
