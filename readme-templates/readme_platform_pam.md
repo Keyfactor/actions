@@ -1,5 +1,3 @@
-{% include "./readme-src/readme-pre.md" ignore missing %}
-
 ### Initial Configuration of PAM Provider
 In order to allow Keyfactor to use the new {{ name }}, the definition needs to be added to the application database.
 This is done by running the provided `kfutil` tool to install the PAM definition, which only needs to be done one time. It uses API credentials to access the Keyfactor instance and create the PAM definition.
@@ -41,7 +39,7 @@ The Keyfactor service and IIS Server should be restarted after making these chan
 ```
 
 
-{% include "./readme-src/readme-register.md" ignore missing %}
+{% include "./readme-src/readme-register.md" %}
 
 ##### Usage
 In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
