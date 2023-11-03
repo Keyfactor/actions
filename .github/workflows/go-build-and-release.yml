@@ -27,7 +27,7 @@ jobs:
           cache: true
       - name: get-is-release
         run: |
-          if [[ -z "${{inputs.release_version}}" ]]; then
+          if [[ ""="${{inputs.release_version}}" ]]; then
             echo "IS_RELEASE=True" | tee -a "$GITHUB_ENV" | tee -a $GITHUB_STEP_SUMMARY;
             echo "GO_ARGS=--skip-publish" | tee -a "$GITHUB_ENV" 
           else
