@@ -22,15 +22,23 @@ jobs:
       - name: get-is-release
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "GO_ARGS=--snapshot" | tee -a "$GITHUB_ENV" 
+            echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV" 
           else
-            echo "GO_ARGS=--snapshot --skip-publish" | tee -a "$GITHUB_ENV" 
+            echo "GO_ARGS=build --snapshot --skip-publish" | tee -a "$GITHUB_ENV" 
           fi
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.KF_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.KF_GPG_PASSPHRASE }}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
           args: ${{ env.GO_ARGS }}
         env:
           # GitHub sets the GITHUB_TOKEN secret automatically.
-          GITHUB_TOKEN: ${{ secrets.token }}
-          PAT_TOKEN: ${{ secrets.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GPG_TTY: $(tty)
