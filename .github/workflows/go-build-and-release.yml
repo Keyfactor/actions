@@ -12,6 +12,12 @@ on:
       token:
         description: 'Secret token from caller workflow to access private packages'
         required: true
+      gpg_key:
+        description: 'GPG Private Key'
+        required: true
+      gpg_pass:
+        description: 'GPG Passphrase'
+        required: true
 
 jobs:
   run-goreleaser:
