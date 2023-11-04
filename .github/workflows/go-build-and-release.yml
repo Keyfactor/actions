@@ -2,13 +2,19 @@ name: Go build placeholder
 
 on:
   workflow_call:
+    inputs:
+      release_version:
+        description: Condition based on release branch build
+        required: false
+        type: string
+
     secrets:
       token:
         description: 'Secret token from caller workflow to access private packages'
         required: true
 
 jobs:
-  call-go-prerelease-workflow:
+  run-goreleaser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,8 +29,10 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV" 
+            echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           else
             echo "GO_ARGS=build --snapshot --skip-publish" | tee -a "$GITHUB_ENV" 
+            echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
@@ -42,3 +50,4 @@ jobs:
           PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GPG_TTY: $(tty)
+          Version: ${{ env.VERSION }}

@@ -51,6 +51,8 @@ jobs:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go'
     uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@release-2.1
+    with: 
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets: 
       token: ${{ secrets.token }}
 
