@@ -56,7 +56,7 @@ jobs:
     secrets: 
       token: ${{ secrets.token }}
       gpg_key: ${{ secrets.KF_GPG_PRIVATE_KEY }}
-      gpg_pass: ${{ secrets.KF_GPG_PASSPHRASE }}
+#      gpg_pass: ${{ secrets.KF_GPG_PASSPHRASE }}
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
