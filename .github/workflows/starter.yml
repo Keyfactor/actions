@@ -11,7 +11,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v2
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@release-2.1
 
   call-get-primary-language:
     outputs:
