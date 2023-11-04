@@ -13,4 +13,4 @@ jobs:
       - name: Remove prereleases
         uses: Keyfactor/action-delete-prereleases@v1.0
         with:
-          token: ${{ secrets.V2BUILDTOKEN }}
+          repo-token: ${{ secrets.V2BUILDTOKEN }}
