@@ -11,6 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove prereleases
-        uses: keyfacor/action-delete-prereleases@v1.0
+        uses: Keyfactor/action-delete-prereleases@v1.0
         with:
           token: ${{ secrets.V2BUILDTOKEN }}
