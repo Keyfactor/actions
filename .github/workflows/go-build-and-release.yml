@@ -34,10 +34,10 @@ jobs:
       - name: get-is-release
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV" 
+            echo "GO_ARGS=release" | tee -a "$GITHUB_ENV" 
             echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           else
-            echo "GO_ARGS=build --snapshot --skip-publish" | tee -a "$GITHUB_ENV" 
+            echo "GO_ARGS=build" | tee -a "$GITHUB_ENV" 
             echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - name: Import GPG key
@@ -49,7 +49,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          args: ${{ env.GO_ARGS }}
+          args: ${{ env.GO_ARGS }} --snapshot
         env:
           # GitHub sets the GITHUB_TOKEN secret automatically.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
