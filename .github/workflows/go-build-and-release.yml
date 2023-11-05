@@ -33,7 +33,7 @@ jobs:
           cache: true
       - name: get-is-release
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
             echo "GO_ARGS=release" | tee -a "$GITHUB_ENV" 
             echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           else
