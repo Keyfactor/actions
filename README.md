@@ -38,7 +38,7 @@ The following are used for go lang builds and are set at the organization level.
 
 
 
-### 🗒️Todo: 
+### 📝Todo: 
 * Add autolinking
 * Remove default admin user when applying branch protection
 
