@@ -19,7 +19,7 @@ The following are used for go lang builds and are set at the organization level.
 * Run the workflows and conditionalized steps to produce a build. If conditions match, release artifacts are delivered [***dotnet-build-and-release | go-build-and-release***]
 
 ### On Create:
-* Configure repository settings - This will use the properties from the json to update topic and description, and will set the teams permissions on the repo accordingly. If the ref created is a branch that matches "release-\*.\*", branch protection is added [***kf-configure-repo***]
+* Configure repository settings - This will use the properties from the json to update topic and description, and will set the teams permissions on the repo accordingly. If the ref created is a branch that matches "release-\*.\*", branch protection is added, autlink reference set ab# to devops [***kf-configure-repo***]
 
 ### On push or workflow_dispatch:
 * Just run the build on the branch with the commit without producing release artifacts
