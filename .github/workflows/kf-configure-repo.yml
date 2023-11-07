@@ -5,7 +5,8 @@ name: Configure Repository Release Branch Settings
 # - action-assign-topics
 # - action-gh-teams-update 
 # - action-set-branch-protection
-# - action-set-repo-license
+# - action-add-autolink 
+# - TODO: action-set-repo-license
 #############################################################################################
 on: 
   workflow_call:

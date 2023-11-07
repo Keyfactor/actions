@@ -39,8 +39,8 @@ The following are used for go lang builds and are set at the organization level.
 
 
 ### 📝Todo: 
-* Add autolinking
 * Remove default admin user when applying branch protection
 * Add overrides for detected language, readme build(?), etc. into json manifest
+* Set repo license
 
 ---
