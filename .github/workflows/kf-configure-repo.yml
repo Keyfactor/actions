@@ -57,3 +57,13 @@ jobs:
       with:
         repo-token: ${{ secrets.token}}
         protect-branch: ${{ github.event.ref}}
+  call-add-autolink:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add autolink
+        uses: fiddlermikey/action-add-autolink@v1.0
+        with:
+          token: ${{ secrets.V2BUILDTOKEN}}
+          keyPrefix: 'ab#'
+          url: 'https://dev.azure.com/Keyfactor/Integration/_workitems/edit/'
+ 
