@@ -52,7 +52,7 @@ jobs:
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
     secrets: 
-      token: ${{ secrets.token }}
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
@@ -61,7 +61,7 @@ jobs:
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets: 
-      token: ${{ secrets.token }}
+      token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
 
@@ -81,7 +81,7 @@ jobs:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v2
     secrets: 
-      token: ${{ secrets.token }}
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   #call-post-release-cleanup-workflow:
   #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
