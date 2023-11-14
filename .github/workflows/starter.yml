@@ -2,7 +2,7 @@ name: Bootstrap Starter Workflow
 on:
   workflow_call:
     secrets:
-      token:
+      CI_TOKEN:
         description: 'GitHub token'
         required: true
       APPROVE_README_PUSH:
@@ -52,7 +52,7 @@ jobs:
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
     secrets: 
-      token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.PRIVATE_PACKAGE_ACCESS  }}
 
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
@@ -81,7 +81,7 @@ jobs:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v2
     secrets: 
-      token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.token }}
 
   #call-post-release-cleanup-workflow:
   #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
