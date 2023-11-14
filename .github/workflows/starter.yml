@@ -52,7 +52,7 @@ jobs:
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
     secrets: 
-      token: ${{ secrets.PRIVATE_PACKAGE_ACCESS  }}
+      token: ${{ secrets.CI_TOKEN  }}
 
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
