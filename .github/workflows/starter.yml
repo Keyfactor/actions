@@ -41,7 +41,7 @@ jobs:
           echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@release-2.1
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
@@ -57,7 +57,7 @@ jobs:
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go'
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@release-2.1
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets: 
