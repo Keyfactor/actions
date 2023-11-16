@@ -68,12 +68,12 @@ jobs:
           git fetch --tags
           if [[ -n `git tag` ]]; then
             echo "Setting vars"
-            allBranchTags=`git tag --sort=-v:refname | grep "$prbasetag" || echo ""`
+            allBranchTags=`git tag --sort=-v:refname | grep "^$prbasetag" || echo ""`
             allRepoTags=`git tag --sort=-v:refname`
-            branchTagBase=`git tag --sort=-v:refname | grep "$prbasetag" | grep -o '^[0-9.]*' | head -n 1 || echo ""`
+            branchTagBase=`git tag --sort=-v:refname | grep "^$prbasetag" | grep -o '^[0-9.]*' | head -n 1 || echo ""`
             latestTagBase=`git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -n 1`
-            latestBranchTag=`git tag --sort=-v:refname | grep "$prbasetag" | grep "^$branchTagBase" | head -n 1 || echo ""`
-            latestReleasedTag=`git tag --sort=-v:refname | grep "$prbasetag" | grep "^$branchTagBase$" | head -n 1 || echo ""`
+            latestBranchTag=`git tag --sort=-v:refname | grep "^$prbasetag" | grep "^$branchTagBase" | head -n 1 || echo ""`
+            latestReleasedTag=`git tag --sort=-v:refname | grep "^$prbasetag" | grep "^$branchTagBase$" | head -n 1 || echo ""`
 
             # If the *TagBase values are not found in the list of tags, it means no final release was produced, and the latest*Tag vars will be empty
             if [[ -z "$latestReleasedTag" ]]; then
