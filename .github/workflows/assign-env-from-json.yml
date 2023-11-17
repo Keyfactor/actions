@@ -76,6 +76,7 @@ jobs:
           input-property: 'about.orchestrator.UOFramework'
 
       - name: Read release_dir property 
+        if: steps.read-type.outputs.output-value contains ['orchestrator', 'ca-gateway', 'pam']
         uses: ./tools
         id: read-release_dir
         with:
