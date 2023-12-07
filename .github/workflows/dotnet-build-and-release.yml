@@ -91,7 +91,7 @@ jobs:
         if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
         run: |
           $fileExists = Get-ChildItem -Path ${{ github.workspace }}\${{ inputs.release_dir }} -Recurse -Filter 'manifest.json' | Select-Object -First 1
-          echo "MANIFEST_FILE=$fileExists" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          if (-not $fileExists) { exit 1 }
 
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
