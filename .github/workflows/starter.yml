@@ -51,6 +51,7 @@ jobs:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
+      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }} 
     secrets: 
       token: ${{ secrets.token  }}
 

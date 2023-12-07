@@ -15,6 +15,10 @@ on:
         description: The relative directory inside the repo where the build artifacts to publish for release will be located
         required: false # leave empty for non-release build
         type: string
+      integration_type:
+        description: The extension integration_type
+        required: true
+        type: string
     secrets:
       token:
         description: 'Secret token from caller workflow to access private packages'
@@ -83,6 +87,12 @@ jobs:
           $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
       
+      - name: Check for manifest
+        if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
+        run: |
+          $fileExists = Get-ChildItem -Path ${{ github.workspace }}\${{ inputs.release_dir }} -Recurse -Filter 'manifest.json' | Select-Object -First 1
+          if (-not $fileExists) { exit 1 }
+
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
         run: |
@@ -102,3 +112,12 @@ jobs:
           asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}.zip
           asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
+
+      - name: Delete Failed Release
+        if: failure() && env.CREATE_RELEASE == 'True'
+        id: delete-failed-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
+
