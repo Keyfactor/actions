@@ -75,6 +75,14 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'about.orchestrator.UOFramework'
 
+      - name: Read keyfactor_platform_version property
+        if: steps.read-type.outputs.output-value == 'orchestrator' || steps.read-type.outputs.output-value == 'pam'
+        uses: ./tools
+        id: read-keyfactor_platform_version
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.keyfactor_platform_version'
+
       - name: Read release_dir property 
         if: steps.read-type.outputs.output-value == 'orchestrator' || steps.read-type.outputs.output-value == 'ca-gateway' || steps.read-type.outputs.output-value == 'pam' 
         uses: ./tools
