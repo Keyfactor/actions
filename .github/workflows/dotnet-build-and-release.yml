@@ -15,6 +15,10 @@ on:
         description: The relative directory inside the repo where the build artifacts to publish for release will be located
         required: false # leave empty for non-release build
         type: string
+      integration_type:
+        description: The extension integration_type
+        required: true
+        type: string
     secrets:
       token:
         description: 'Secret token from caller workflow to access private packages'
@@ -83,6 +87,12 @@ jobs:
           $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
       
+      - name: Check for manifest
+        if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
+        run: |
+          $fileExists = Get-ChildItem -Path ${{ github.workspace }}\${{ inputs.release_dir }} -Recurse -Filter 'manifest.json' | Select-Object -First 1
+          if (-not $fileExists) { exit 1 }
+
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
         run: |
