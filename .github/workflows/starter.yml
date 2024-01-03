@@ -57,7 +57,7 @@ jobs:
 
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
-    if: needs.call-get-primary-language.outputs.primary_language == 'Go'
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && fileExists('.goreleaser.yaml')
     uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
@@ -65,6 +65,15 @@ jobs:
       token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
+
+  call-helm-chart-build-and-release-workflow:
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && !fileExists('.goreleaser.yaml')
+    uses: keyfactor/actions/.github/workflows/helm-chart-build-and-release.yml@ab#52817-add-helm-container-builds
+    with: 
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
