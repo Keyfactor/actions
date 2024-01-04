@@ -16,8 +16,17 @@ on:
 jobs:
   helm:
     runs-on: ubuntu-latest
+    # This job conditional should be moved to a step condition for the actual upload.
     if: github.event.pull_request.merged == true
     steps:
+      - name: get-is-release
+        run: |
+          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
+            echo "SKIP_CHARTS_UPLOAD=false" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "SKIP_CHARTS_UPLOAD=true" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Set IMAGE_NAME
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
@@ -68,3 +77,4 @@ jobs:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
           charts_dir: deploy/charts
+          skip_upload: ${{ env.SKIP_CHARTS_UPLOAD}}
