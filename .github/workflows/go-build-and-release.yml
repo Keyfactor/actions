@@ -40,6 +40,10 @@ jobs:
             echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV" 
             echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Update version.go
+        if: github.event_name == 'pull_request' && fileExists('pkg/version/version.go') # Make this file a property in the manifest
+        run: |
+          sed -i "s/const VERSION = .*/const VERSION = \"${{ inputs.release_version }}\"/" pkg/version/version.go
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         id: import_gpg
