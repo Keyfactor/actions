@@ -21,7 +21,6 @@ on:
 
 jobs:
   run-goreleaser:
-    needs: call-version-file-exists
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
