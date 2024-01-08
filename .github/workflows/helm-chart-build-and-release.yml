@@ -1,0 +1,80 @@
+name: Go build 
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: Condition based on release branch build
+        required: false
+        type: string
+
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access private packages'
+        required: true
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    # This job conditional should be moved to a step condition for the actual upload.
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: get-is-release
+        run: |
+          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
+            echo "SKIP_CHARTS_UPLOAD=false" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "SKIP_CHARTS_UPLOAD=true" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set IMAGE_NAME
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
+      # Checkout code
+      # https://github.com/actions/checkout
+      - name: Checkout code
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      # Extract metadata (tags, labels) to use in Helm chart
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Set version from DOCKER_METADATA_OUTPUT_VERSION as environment variable
+      - name: Set Version
+        run: |
+          echo "VERSION=${DOCKER_METADATA_OUTPUT_VERSION:1}" >> $GITHUB_ENV
+
+      # Change version and appVersion in Chart.yaml to the tag in the closed PR
+      - name: Update Helm App/Chart Version
+        shell: bash
+        run: |
+          sed -i "s/^version: .*/version: ${{ env.VERSION }}/g" deploy/charts/command-cert-manager-issuer/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"${{ env.DOCKER_METADATA_OUTPUT_VERSION }}\"/g" deploy/charts/command-cert-manager-issuer/Chart.yaml
+
+      # Setup Helm
+      # https://github.com/Azure/setup-helm
+      - name: Install Helm
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Helm requires an ident name to be set for chart-releaser to work
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      # Build and release Helm chart to GitHub Pages
+      # https://github.com/helm/chart-releaser-action
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@be16258da8010256c6e82849661221415f031968 # v1.5.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          charts_dir: deploy/charts
+          skip_upload: ${{ env.SKIP_CHARTS_UPLOAD}}
