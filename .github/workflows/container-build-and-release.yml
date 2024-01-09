@@ -117,7 +117,6 @@ jobs:
 
   merge:
     runs-on: ubuntu-latest
-    if: needs.get-release-values.outputs.PUSH_IMAGE == true
     needs:
       - run-container-build
       - get-release-values
@@ -156,8 +155,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push to container registry
+        run: |
+          echo "Push trigger: ${{ needs.get-release-values.outputs.PUSH_IMAGE }}"
 
-      ## Create manifest list and push
+      ## Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
       #- name: Create manifest list and push
       #  working-directory: /tmp/digests
       #  run: |
