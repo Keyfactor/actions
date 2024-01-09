@@ -117,7 +117,7 @@ jobs:
 
   merge:
     runs-on: ubuntu-latest
-    if: needs.get-release-values.outputs.PUSH_IMAGE == 'true'
+    if: needs.get-release-values.outputs.PUSH_IMAGE == true
     needs:
       - run-container-build
       - get-release-values
