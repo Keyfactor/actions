@@ -17,11 +17,25 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  run-container-build:
+  get-release-values:
     name: Build Containers
     runs-on: ubuntu-latest
     outputs:
       PUSH_IMAGE: ${{ steps.get-is-release.outputs.PUSH_IMAGE }}  
+    steps:
+      - name: get-is-release
+        run: |
+          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
+            echo "PUSH_IMAGE=true" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "PUSH_IMAGE=false" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+  run-container-build:
+    name: Build Containers
+    runs-on: ubuntu-latest
+    needs: get-release-values
     strategy:
       fail-fast: false
       matrix:
@@ -36,15 +50,6 @@ jobs:
       packages: write
 
     steps:
-      - name: get-is-release
-        run: |
-          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
-            echo "PUSH_IMAGE=true" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            echo "PUSH_IMAGE=false" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
       - name: Set IMAGE_NAME
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
@@ -91,7 +96,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          push: ${{ env.PUSH_IMAGE == true }}
+          push: ${{ needs.get-release-values.outputs.PUSH_IMAGE == 'true' }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true
 
       # Export digest
@@ -112,9 +117,10 @@ jobs:
 
   merge:
     runs-on: ubuntu-latest
-    if: needs.run-container-build.outputs.PUSH_IMAGE == 'true'
+    if: needs.get-release-values.outputs.PUSH_IMAGE == 'true'
     needs:
       - run-container-build
+      - get-release-values
     steps:
       - name: Set IMAGE_NAME
         run: |
