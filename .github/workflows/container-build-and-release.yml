@@ -18,7 +18,7 @@ env:
 
 jobs:
   get-release-values:
-    name: Build Containers
+    name: Get Release Properties
     runs-on: ubuntu-latest
     outputs:
       PUSH_IMAGE: ${{ steps.get-is-release.outputs.PUSH_IMAGE }}  
@@ -26,11 +26,11 @@ jobs:
       - name: get-is-release
         run: |
           if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
-            echo "PUSH_IMAGE=true" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "PUSH_IMAGE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT  | tee -a $GITHUB_STEP_SUMMARY
+            echo "VERSION=${{ inputs.release_version }}" | tee -a $GITHUB_ENV  | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           else
-            echo "PUSH_IMAGE=false" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_OUTPUT"  | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "PUSH_IMAGE=false" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT  | tee -a $GITHUB_STEP_SUMMARY
+            echo "VERSION=0.0.0" | tee -a $GITHUB_ENV  | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           fi
   run-container-build:
     name: Build Containers
