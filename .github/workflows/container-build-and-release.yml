@@ -40,8 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - linux/arm64
-          #- linux/amd64
+          - linux/amd64
+          #- linux/arm64
           #- linux/s390x
           #- linux/ppc64le
 
@@ -156,7 +156,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push to container registry
         run: |
-          echo "Push trigger:${{ needs.get-release-values.outputs.PUSH_IMAGE == 'true' }}"
+          echo "Push trigger:${{ needs.get-release-values.outputs.PUSH_IMAGE }}"
 
       ## Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
       #- name: Create manifest list and push
