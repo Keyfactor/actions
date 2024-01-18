@@ -85,7 +85,7 @@ jobs:
 
   call-helm-chart-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
-    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && !fileExists('.goreleaser.yaml')
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go'  && needs.call-goreleaser-exists.outputs.goreleaser-exists != 'true'
     uses: keyfactor/actions/.github/workflows/helm-chart-build-and-release.yml@ab#52817-add-helm-container-builds
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
