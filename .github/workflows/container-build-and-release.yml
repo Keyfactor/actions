@@ -21,9 +21,10 @@ jobs:
     name: Get Release Properties
     runs-on: ubuntu-latest
     outputs:
-      PUSH_IMAGE: ${{ steps.get-is-release.outputs.PUSH_IMAGE }}  
+      PUSH_IMAGE: ${{ steps.set-vars.outputs.PUSH_IMAGE }}  
     steps:
-      - name: get-is-release
+      - name: Determine IMAGE_PUSH and VERSION
+        id:  set-vars
         run: |
           if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
             echo "PUSH_IMAGE=true" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
