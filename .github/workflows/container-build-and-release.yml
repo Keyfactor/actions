@@ -155,17 +155,16 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push to container registry
+
+      # Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
+      - name: Create manifest list and push
+        if: needs.get-release-values.outputs.PUSH_IMAGE == 'true'
+        working-directory: /tmp/digests
         run: |
-          echo "Push trigger:${{ needs.get-release-values.outputs.PUSH_IMAGE }}"
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
-      ## Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
-      #- name: Create manifest list and push
-      #  working-directory: /tmp/digests
-      #  run: |
-      #    docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-      #      $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
-
-      #- name: Inspect image
-      #  run: |
-      #    docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      - name: Inspect image
+        if: needs.get-release-values.outputs.PUSH_IMAGE == 'true'
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
