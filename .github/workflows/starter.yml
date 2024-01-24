@@ -56,6 +56,15 @@ jobs:
         with:
           files: ".goreleaser.y*ml"
 
+  setup_platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
+    steps:
+      - name: Create an array from platform_list input #  
+        id: vars
+        run: echo "platform_matrix=$(jq 'split(",")' -Rc <(echo '${{ inputs.platform_list }}'))" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
@@ -83,12 +92,12 @@ jobs:
       gpg_pass: ${{ secrets.gpg_pass }}
 
   call-container-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists]
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
     uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@ab#53666-container-build
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
-      platform_list: linux/amd64,linux/arm64
+      platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
 
