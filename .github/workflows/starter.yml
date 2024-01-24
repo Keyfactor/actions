@@ -88,6 +88,7 @@ jobs:
     uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@ab#53666-container-build
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+      platform_list: linux/amd64
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
 

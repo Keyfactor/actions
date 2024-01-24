@@ -7,6 +7,10 @@ on:
         description: Condition based on release branch build
         required: false
         type: string
+      platform_list:
+        required: true
+        description: platform name from input
+        type: string # like linux/amd64,linux/arm64
 
     secrets:
       token:
@@ -17,6 +21,14 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
+    steps:
+      - name: Create an array from platform_list input 
+        id: vars
+        run: echo "platform_matrix=$(jq 'split(",")' -Rc <(echo '${{ inputs.platform_list }}'))" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
   get-release-values:
     name: Get Release Properties
     runs-on: ubuntu-latest
@@ -40,11 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - linux/amd64
-          #- linux/arm64
-          #- linux/s390x
-          #- linux/ppc64le
+        platform: ${{ fromJson(needs.setup.outputs.platform_matrix) }}
 
     permissions:
       contents: read
