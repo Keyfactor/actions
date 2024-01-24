@@ -63,7 +63,8 @@ jobs:
     steps:
       - name: Create an array from platform_list input #  
         id: vars
-        run: echo "platform_matrix=$(jq 'split(",")' -Rc <(echo '${{ inputs.platform_list }}'))" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+        run: 
+          echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
