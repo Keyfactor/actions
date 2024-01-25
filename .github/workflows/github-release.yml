@@ -138,7 +138,7 @@ jobs:
     needs: get-versions
     if: (github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True') || github.event.inputs.force_release == 'true'
     outputs:
-      release_version: ${{ inputs.release_version_override || steps.create_release.outputs.current_tag }}
+      release_version: ${{ github.event.inputs.release_version_override || || steps.create_release.outputs.current_tag }}
       release_url: ${{ steps.create_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
@@ -148,10 +148,10 @@ jobs:
         if:  needs.get-versions.outputs.LATEST_TAG == ''        
         run: |
           echo "INITIAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_STEP_SUMMARY" | tee -a "$GITHUB_ENV"
-          echo "MANUAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_ENV"
+          echo "MANUAL_VERSION=${{ github.event.inputs.release_version_override || needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_ENV"
       - name: Set semver info
         id: set-semver-info
-        if:  needs.get-versions.outputs.LATEST_TAG != ''        
+        if:  needs.get-versions.outputs.LATEST_TAG != ''
         uses: fiddlermikey/action-bump-semver@main
         with:
           current_version: ${{ needs.get-versions.outputs.LATEST_TAG}}
@@ -160,16 +160,16 @@ jobs:
       - name: Show next sem-version
         if:  needs.get-versions.outputs.LATEST_TAG != ''        
         run: |
-          echo "MANUAL_VERSION=${{ steps.set-semver-info.outputs.new_version }}" > "$GITHUB_ENV"
+          echo "MANUAL_VERSION=${{ github.event.inputs.release_version_override || steps.set-semver-info.outputs.new_version }}" > "$GITHUB_ENV"
       - run: |
-          echo "Next version: ${{ env.MANUAL_VERSION }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Next version: ${{ github.event.inputs.release_version_override || env.MANUAL_VERSION }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Create new release
         id: create_release
         uses: keyfactor/action-create-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
-        if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+          MANUAL_VERSION: ${{ github.event.inputs.release_version_override || env.MANUAL_VERSION }}
+        if: (github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True') || github.event.inputs.force_release == 'true'
         with:
           release_name:  ${{ env.MANUAL_VERSION }}
           body: |
