@@ -138,7 +138,7 @@ jobs:
     needs: get-versions
     if: (github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True') || github.event.inputs.force_release == 'true'
     outputs:
-      release_version: ${{ github.event.inputs.release_version_override || || steps.create_release.outputs.current_tag }}
+      release_version: ${{ github.event.inputs.release_version_override || steps.create_release.outputs.current_tag }}
       release_url: ${{ steps.create_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
