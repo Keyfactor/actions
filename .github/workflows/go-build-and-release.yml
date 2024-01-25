@@ -38,8 +38,8 @@ jobs:
       - name: get-is-release
         run: |
           if [[ ("${{ github.event_name }}" == "pull_request" || "${{ inputs.force_release }}" == "true") && "${{ inputs.release_version }}" != "" ]]; then
-            echo "GO_ARGS=release --clean" | tee -a "$GITHUB_ENV" 
             echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "GO_ARGS=release --version inputs.release_version --clean" | tee -a "$GITHUB_ENV" 
           else
             echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV" 
             echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
