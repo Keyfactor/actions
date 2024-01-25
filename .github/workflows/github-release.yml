@@ -1,6 +1,16 @@
 name: Create GitHub release version and location
 on:
   workflow_call:
+    inputs:
+      force_release:
+        description: Force a release build
+        required: false
+        type: boolean
+        default: false
+      release_version_override:
+        description: 'Force a specific release version'
+        required: false
+        type: string
     outputs:
       release_version:
         description: The computed release version for the release (or pre-release) being built
@@ -122,9 +132,9 @@ jobs:
 
   create-github-release:
     needs: get-versions
-    if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+    if: (github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True') || github.event.inputs.force_release == 'true'
     outputs:
-      release_version: ${{ steps.create_release.outputs.current_tag }}
+      release_version: ${{ inputs.release_version_override || steps.create_release.outputs.current_tag }}
       release_url: ${{ steps.create_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:

@@ -10,6 +10,11 @@ on:
         description: 'Force a specific primary language.  Valid values are "C#" and "Go"'
         required: false
         type: string
+      force_release:
+        description: Force a release build
+        required: false
+        type: boolean
+        default: false
     secrets:
       token:
         description: 'GitHub token'
@@ -51,6 +56,8 @@ jobs:
 
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
+    with:
+      force_release: ${{ inputs.force_release || false }}
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
