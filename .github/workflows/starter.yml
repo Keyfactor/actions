@@ -77,6 +77,7 @@ jobs:
     uses: spbsoluble/actions/.github/workflows/go-build-and-release.yml@overrides
     with: 
       release_version: ${{ inputs.release_version_override || needs.call-create-github-release-workflow.outputs.release_version }}
+      force_release: ${{ inputs.force_release || false }}
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
