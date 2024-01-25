@@ -7,6 +7,10 @@ on:
         description: Condition based on release branch build
         required: false
         type: string
+      force_release:
+        description: Force a release build
+        required: false
+        type: boolean
 
     secrets:
       token:
@@ -33,7 +37,7 @@ jobs:
           cache: true
       - name: get-is-release
         run: |
-          if [[ ("${{ github.event_name }}" == "pull_request") && "${{ inputs.release_version }}" != "" ]]; then
+          if ("${{ github.event_name }}" == "pull_request" || "${{ inputs.force_release }}" == "true") && "${{ inputs.release_version }}" != "" ]]; then
             echo "GO_ARGS=release --clean" | tee -a "$GITHUB_ENV" 
             echo "VERSION=${{ inputs.release_version }}" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           else
