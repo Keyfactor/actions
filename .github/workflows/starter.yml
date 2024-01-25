@@ -55,7 +55,7 @@ jobs:
           echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@overrides
     with:
       force_release: ${{ inputs.force_release || false }}
 
