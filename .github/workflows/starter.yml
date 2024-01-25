@@ -40,6 +40,36 @@ jobs:
         run: |
           echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
 
+  call-goreleaser-exists:
+    outputs:
+      goreleaser-exists: ${{ steps.check_files.outputs.files_exists }}
+    runs-on: ubuntu-latest
+    name: Check for .goreleaser file
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v2
+        with:
+          files: ".goreleaser.y*ml"
+
+  setup_platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create an array from platform_list input #  
+        id: vars
+        run: 
+          echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
@@ -57,7 +87,7 @@ jobs:
 
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
-    if: needs.call-get-primary-language.outputs.primary_language == 'Go'
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true' 
     uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
@@ -65,6 +95,16 @@ jobs:
       token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
+
+  call-container-build-and-release-workflow:
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@ab#53666-container-build
+    with: 
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+      platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
