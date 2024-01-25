@@ -121,7 +121,7 @@ jobs:
           if [[ "${{ env.PR_STATE }}" == "open" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
-          elif [[ -n "$RELEASE_VERSION_OVERRIDE" && "$RELEASE_VERSION_OVERRIDE" == *"-rc" ]]; then
+          elif [[ -n "${{ github.event.inputs.release_version_override }}" && "${{ github.event.inputs.release_version_override }}" == *"-rc" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
           fi
