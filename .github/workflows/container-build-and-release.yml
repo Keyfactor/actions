@@ -77,7 +77,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{raw}},value=${{ inputs.release_version }}
-            type=sha
 
       # Set up QEMU
       # https://github.com/docker/setup-qemu-action
@@ -159,7 +158,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{raw}},value=${{ inputs.release_version }}
-            type=sha
 
       # Login to Docker registry
       # https://github.com/docker/login-action
