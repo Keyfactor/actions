@@ -113,6 +113,7 @@ jobs:
           echo "PR_BASE_REF=${{ env.PR_BASE_REF }}" | tee -a "$GITHUB_OUTPUT"
           echo "PR_STATE=${{ env.PR_STATE }}"
           echo "PR_MERGED=${{ env.PR_MERGED }}"
+          echo "RELEASE_VERSION_OVERRIDE=${{ github.event.inputs.release_version_override }}" >> $GITHUB_ENV
           if [[ "${{ env.PR_STATE }}" == "closed" && "${{ env.PR_MERGED }}" == "true" && "${{ env.PR_COMMIT_SHA }}" == "${{ env.GITHUB_SHA }}" ]]; then
             echo "IS_FULL_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
             echo "INC_LEVEL=patch" | tee -a "$GITHUB_OUTPUT"
@@ -120,7 +121,7 @@ jobs:
           if [[ "${{ env.PR_STATE }}" == "open" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event.inputs.release_version_override }}" != "" && "${{ github.event.inputs.release_version_override }}" == *"-rc"]]; then
+          elif [[ -n "$RELEASE_VERSION_OVERRIDE" && "$RELEASE_VERSION_OVERRIDE" == *"-rc" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
           fi
