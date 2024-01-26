@@ -120,10 +120,10 @@ jobs:
           fi
           if [[ "${{ env.PR_STATE }}" == "open" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
-          elif [[ -n "${{ github.event.inputs.release_version_override }}" && "${{ github.event.inputs.release_version_override }}" == *"-rc" ]]; then
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+          elif [ [ -n "${{ github.event.inputs.release_version_override }}" ] && [ "${{ github.event.inputs.release_version_override }}" == *"-rc" ]]; then
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
           fi
           if [[ "${{ env.PR_BASE_REF }}" == "release-"* ]]; then
             echo "IS_RELEASE_BRANCH=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
@@ -171,7 +171,7 @@ jobs:
           MANUAL_VERSION: ${{ github.event.inputs.release_version_override || env.MANUAL_VERSION }}
         if: (github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True') || github.event.inputs.force_release == 'true'
         with:
-          release_name:  ${{ env.MANUAL_VERSION }}
+          release_name:  ${{ github.event.inputs.release_version_override || env.MANUAL_VERSION }}
           body: |
             [Changelog](/./CHANGELOG.md) 
             [Readme](/./README.md) 
@@ -179,7 +179,7 @@ jobs:
           draft: false
           prerelease: ${{ needs.get-versions.outputs.IS_PRE_RELEASE == 'True'}}
           prerelease_suffix: rc
-          tag_name: ${{ env.MANUAL_VERSION }}
+          tag_name: ${{ github.event.inputs.release_version_override || env.MANUAL_VERSION }}
           auto_increment_type: ${{ (needs.get-versions.outputs.IS_PRE_RELEASE == 'True') && 'prerelease' || 'patch' }}
           tag_schema: semantic
           commitish: ${{ github.sha }}
