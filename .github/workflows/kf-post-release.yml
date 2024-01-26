@@ -1,0 +1,16 @@
+name: Post release tasks
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: token
+        required: true
+
+jobs:
+  clean-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove prereleases
+        uses: Keyfactor/action-delete-prereleases@v1.0
+        with:
+          repo-token: ${{ secrets.V2BUILDTOKEN }}

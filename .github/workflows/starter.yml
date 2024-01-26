@@ -1,0 +1,110 @@
+name: Bootstrap Starter Workflow
+on:
+  workflow_call:
+    inputs:
+      release_version_override:
+        description: 'Force a specific release version'
+        required: false
+        type: string
+      primary_language_override:
+        description: 'Force a specific primary language.  Valid values are "C#" and "Go"'
+        required: false
+        type: string
+      force_release:
+        description: Force a release build
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      token:
+        description: 'GitHub token'
+        required: true
+      APPROVE_README_PUSH:
+        description: 'Token to add-and-commit generated readme'
+        required: true  
+      gpg_key:
+        description: 'GPG Private Key'
+        required: true
+      gpg_pass:
+        description: 'GPG Passphrase'
+        required: true
+
+
+jobs:
+  call-assign-from-json-workflow:
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v2
+
+  call-get-primary-language:
+    outputs:
+      primary_language: ${{ inputs.primary_language_override || steps.read.outputs.primary_language }}
+    runs-on: ubuntu-latest
+    name: Detect Primary Language
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read primary language
+        id: read
+        uses: fiddlermikey/action-get-primary-language@v1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Display type
+        id: display
+        run: |
+          echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
+
+  call-create-github-release-workflow:
+    uses: spbsoluble/actions/.github/workflows/github-release.yml@overrides
+    with:
+      force_release: ${{ inputs.force_release || false }}
+
+  call-dotnet-build-and-release-workflow:
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    if: needs.call-get-primary-language.outputs.primary_language == 'C#'
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v2
+    with:
+      release_version: ${{ inputs.release_version_override || needs.call-create-github-release-workflow.outputs.release_version }}
+      release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
+      release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
+      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }} 
+    secrets: 
+      token: ${{ secrets.token  }}
+
+  call-go-build-and-release-workflow:
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go'
+    uses: spbsoluble/actions/.github/workflows/go-build-and-release.yml@overrides
+    with: 
+      release_version: ${{ inputs.release_version_override || needs.call-create-github-release-workflow.outputs.release_version }}
+      force_release: ${{ inputs.force_release || false }}
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}
+      gpg_key: ${{ secrets.gpg_key }}
+      gpg_pass: ${{ secrets.gpg_pass }}
+
+  call-generate-readme-workflow:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v2
+    secrets:
+      token: ${{ secrets.APPROVE_README_PUSH }}
+
+  call-update-catalog-workflow:
+    if: inputs.update_catalog == 'True' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
+    secrets: 
+      token: ${{ secrets.SDK_SYNC_PAT }}
+
+  call-repository-configuration-workflow:
+    if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
+    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v2
+    secrets: 
+      token: ${{ secrets.token }}
+
+  #call-post-release-cleanup-workflow:
+  #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
+  #  if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
+  #  uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v2
+  #  secrets: 
+  #    token: ${{ secrets.token }}
+
