@@ -99,7 +99,7 @@ jobs:
   call-container-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
-    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@release-2.3
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
@@ -108,7 +108,7 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@release-2.3
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v2
     secrets:
       token: ${{ secrets.APPROVE_README_PUSH }}
 
