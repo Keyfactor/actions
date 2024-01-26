@@ -27,7 +27,7 @@ jobs:
     name: Detect Primary Language
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Read primary language
@@ -47,7 +47,7 @@ jobs:
     name: Check for .goreleaser file
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check file existence
@@ -62,7 +62,7 @@ jobs:
       platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create an array from platform_list input #  
