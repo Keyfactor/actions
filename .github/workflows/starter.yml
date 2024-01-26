@@ -27,7 +27,7 @@ jobs:
     name: Detect Primary Language
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Read primary language
@@ -47,7 +47,7 @@ jobs:
     name: Check for .goreleaser file
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check file existence
@@ -62,7 +62,7 @@ jobs:
       platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create an array from platform_list input #  
@@ -86,7 +86,7 @@ jobs:
       token: ${{ secrets.token  }}
 
   call-go-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true' 
     uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with: 
@@ -99,7 +99,7 @@ jobs:
   call-container-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
-    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@ab#53666-container-build
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}

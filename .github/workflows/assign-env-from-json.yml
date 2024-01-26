@@ -31,13 +31,13 @@ jobs:
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: checkout-json-file
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: src
 
       - name: checkout-action
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fiddlermikey/assign-from-json
           path: tools
