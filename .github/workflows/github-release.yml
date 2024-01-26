@@ -122,8 +122,12 @@ jobs:
             echo "Processing open PR"
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-          elif [ [ -n "${{ github.event.inputs.release_version_override }}" ] && [ "${{ github.event.inputs.release_version_override }}" == *"-rc." ]]; then
+          elif [[ -n "${{ github.event.inputs.release_version_override }}" ] && [ "${{ github.event.inputs.release_version_override }}" == *"-rc." ]]; then
             echo "Force create release using override version ${{ github.event.inputs.release_version_override }}"
+            echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+          else
+            echo "Neither open PR nor release override version, defaulting to prerelease"
             echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
             echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
           fi
