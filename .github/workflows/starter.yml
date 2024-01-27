@@ -71,7 +71,7 @@ jobs:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@ab#54101-node20-updates
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
