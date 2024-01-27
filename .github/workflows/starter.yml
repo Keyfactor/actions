@@ -32,7 +32,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Read primary language
         id: read
-        uses: fiddlermikey/action-get-primary-language@v1.0
+        uses: fiddlermikey/action-get-primary-language@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Display type
