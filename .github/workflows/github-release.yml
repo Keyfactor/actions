@@ -10,15 +10,16 @@ on:
         value: ${{ jobs.create-github-release.outputs.release_url }}
       IS_FULL_RELEASE:
         description: The upload URL for build artifacts for this release
-        value: ${{ jobs.get-versions.outputs.IS_FULL_RELEASE }}
+        value: ${{ jobs.create-github-release-workflow.outputs.IS_FULL_RELEASE }}
   pull_request:
     types: [opened, closed, synchronize]
   push:
 
 jobs:
-  call-create-github-release-workflow:
+  call-check-file-action:
     uses: keyfactor/cpr-release-checks/.github/workflows/check-files.yml@main
-  get-versions:
+
+  create-github-release-workflow:
     runs-on: ubuntu-latest
     outputs:
       PR_BASE_REF: ${{ steps.set-outputs.outputs.PR_BASE_REF }}
@@ -121,41 +122,41 @@ jobs:
           echo "LATEST_TAG=${{ env.LATEST_TAG }}" | tee -a "$GITHUB_OUTPUT"
 
   create-github-release:
-    needs: get-versions
-    if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+    needs: create-github-release-workflow
+    if: github.event_name == 'pull_request' && needs.create-github-release-workflow.outputs.IS_RELEASE_BRANCH == 'True'
     outputs:
       release_version: ${{ steps.create_release.outputs.current_tag }}
       release_url: ${{ steps.create_release.outputs.upload_url }}
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "INC_LEVEL=${{ needs.get-versions.outputs.INC_LEVEL}}"
+          echo "INC_LEVEL=${{ needs.create-github-release-workflow.outputs.INC_LEVEL}}"
       - name: Check if initial release
-        if:  needs.get-versions.outputs.LATEST_TAG == ''        
+        if:  needs.create-github-release-workflow.outputs.LATEST_TAG == ''        
         run: |
-          echo "INITIAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_STEP_SUMMARY" | tee -a "$GITHUB_ENV"
-          echo "MANUAL_VERSION=${{needs.get-versions.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_ENV"
+          echo "INITIAL_VERSION=${{needs.create-github-release-workflow.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_STEP_SUMMARY" | tee -a "$GITHUB_ENV"
+          echo "MANUAL_VERSION=${{needs.create-github-release-workflow.outputs.PR_BASE_TAG}}.0-rc.0" | tee -a "$GITHUB_ENV"
       - name: Set semver info
         id: set-semver-info
-        if:  needs.get-versions.outputs.LATEST_TAG != ''        
+        if:  needs.create-github-release-workflow.outputs.LATEST_TAG != ''        
         uses: fiddlermikey/action-bump-semver@main
         with:
-          current_version: ${{ needs.get-versions.outputs.LATEST_TAG}}
-          level: ${{ needs.get-versions.outputs.INC_LEVEL}}
+          current_version: ${{ needs.create-github-release-workflow.outputs.LATEST_TAG}}
+          level: ${{ needs.create-github-release-workflow.outputs.INC_LEVEL}}
           preID: rc
       - name: Show next sem-version
-        if:  needs.get-versions.outputs.LATEST_TAG != ''        
+        if:  needs.create-github-release-workflow.outputs.LATEST_TAG != ''        
         run: |
           echo "MANUAL_VERSION=${{ steps.set-semver-info.outputs.new_version }}" > "$GITHUB_ENV"
       - run: |
           echo "Next version: ${{ env.MANUAL_VERSION }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Create new release
         id: create_release
-        uses: keyfactor/action-create-release@v3
+        uses: keyfactor/action-create-release@v3.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
-        if: github.event_name == 'pull_request' && needs.get-versions.outputs.IS_RELEASE_BRANCH == 'True'
+        if: github.event_name == 'pull_request' && needs.create-github-release-workflow.outputs.IS_RELEASE_BRANCH == 'True'
         with:
           release_name:  ${{ env.MANUAL_VERSION }}
           body: |
@@ -163,9 +164,9 @@ jobs:
             [Readme](/./README.md) 
             For the latest README.md updates visit the [Main Page](/../main) for this repository
           draft: false
-          prerelease: ${{ needs.get-versions.outputs.IS_PRE_RELEASE == 'True'}}
+          prerelease: ${{ needs.create-github-release-workflow.outputs.IS_PRE_RELEASE == 'True'}}
           prerelease_suffix: rc
           tag_name: ${{ env.MANUAL_VERSION }}
-          auto_increment_type: ${{ (needs.get-versions.outputs.IS_PRE_RELEASE == 'True') && 'prerelease' || 'patch' }}
+          auto_increment_type: ${{ (needs.create-github-release-workflow.outputs.IS_PRE_RELEASE == 'True') && 'prerelease' || 'patch' }}
           tag_schema: semantic
           commitish: ${{ github.sha }}
