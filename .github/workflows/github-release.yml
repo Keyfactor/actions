@@ -152,7 +152,7 @@ jobs:
           echo "Next version: ${{ env.MANUAL_VERSION }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Create new release
         id: create_release
-        uses: keyfactor/action-create-release@ab#54101-node20-update
+        uses: keyfactor/action-create-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_VERSION: ${{ env.MANUAL_VERSION }}
