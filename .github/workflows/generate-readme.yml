@@ -35,7 +35,7 @@ jobs:
       - name: Show generated README.md
         run: echo $(cat README.md)
         
-      - uses: Keyfactor/add-and-commit@v9.1.3
+      - uses: Keyfactor/add-and-commit@v9.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
