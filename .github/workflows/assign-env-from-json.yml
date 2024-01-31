@@ -67,6 +67,14 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'update_catalog'
 
+      - name: Read pam_support property
+        if: steps.read-type.outputs.output-value == 'pam_support' 
+        uses: ./tools
+        id: read-pam_support
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.pam_support'
+
       - name: Read UOFramework property
         if: steps.read-type.outputs.output-value == 'orchestrator' 
         uses: ./tools
@@ -76,7 +84,7 @@ jobs:
           input-property: 'about.orchestrator.UOFramework'
 
       - name: Read keyfactor_platform_version property
-        if: steps.read-type.outputs.output-value == 'orchestrator' || steps.read-type.outputs.output-value == 'pam'
+        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.pam_support.outputs.output-value == true
         uses: ./tools
         id: read-keyfactor_platform_version
         with:
