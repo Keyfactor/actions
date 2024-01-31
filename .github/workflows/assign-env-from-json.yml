@@ -68,7 +68,7 @@ jobs:
           input-property: 'update_catalog'
 
       - name: Read pam_support property
-        if: steps.read-type.outputs.output-value == 'pam_support' 
+        if: steps.read-type.outputs.output-value == 'orchestrator' 
         uses: ./tools
         id: read-pam_support
         with:
