@@ -84,7 +84,7 @@ jobs:
           input-property: 'about.orchestrator.UOFramework'
 
       - name: Read keyfactor_platform_version property
-        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.pam_support.outputs.output-value == 'true'
+        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.read-pam_support.outputs.output-value == 'true'
         uses: ./tools
         id: read-keyfactor_platform_version
         with:
