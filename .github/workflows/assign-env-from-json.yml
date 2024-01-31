@@ -115,6 +115,10 @@ jobs:
           echo "* ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ steps.read-type.outputs.output-value }}" == 'orchestrator' ]]; then
             echo "* ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            echo "* ${{ steps.read-pam_support.outputs.output-property }} &colon; ${{ steps.read-pam_support.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            if [[ "${{ steps.read-type.outputs.output-value }}" == 'orchestrator' ]]; then
+              echo "* ${{ steps.read-keyfactor_platform_version.outputs.output-property }} &colon; ${{ steps.read-keyfactor_platform_version.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            fi
           fi
           echo "* ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
 
