@@ -84,7 +84,7 @@ jobs:
           input-property: 'about.orchestrator.UOFramework'
 
       - name: Read keyfactor_platform_version property
-        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.pam_support.outputs.output-value == true
+        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.pam_support.outputs.output-value == 'true'
         uses: ./tools
         id: read-keyfactor_platform_version
         with:
@@ -116,7 +116,7 @@ jobs:
           if [[ "${{ steps.read-type.outputs.output-value }}" == 'orchestrator' ]]; then
             echo "* ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
             echo "* ${{ steps.read-pam_support.outputs.output-property }} &colon; ${{ steps.read-pam_support.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
-            if [[ "${{ steps.read-type.outputs.output-value }}" == 'orchestrator' ]]; then
+            if [[ "${{ steps.read-pam_support.outputs.output-value }}" == 'true' ]]; then
               echo "* ${{ steps.read-keyfactor_platform_version.outputs.output-property }} &colon; ${{ steps.read-keyfactor_platform_version.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
             fi
           fi
