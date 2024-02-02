@@ -74,6 +74,7 @@ jobs:
         with:
           input-file: 'src/integration-manifest.json'
           input-property: 'about.orchestrator.pam_support'
+          required-value: 'false'
 
       - name: Read UOFramework property
         if: steps.read-type.outputs.output-value == 'orchestrator' 
