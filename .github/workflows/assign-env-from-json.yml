@@ -41,6 +41,7 @@ jobs:
         with:
           repository: fiddlermikey/assign-from-json
           path: tools
+          ref: add-required-value
 
       - name: Adding initial markdown for Summary
         id: adding-initial-markdown
