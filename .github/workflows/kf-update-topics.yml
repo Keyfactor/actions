@@ -18,7 +18,7 @@ jobs:
           repo-token: ${{ secrets.token}}
       - name: Update topic from integration_type
         id: update
-        uses: keyfactor/action-assign-topics@v1.0
+        uses: keyfactor/action-assign-topics@ab#54590-add-anygateway
         with:
           input-file: integration-manifest.json
           repo-token: ${{ secrets.token}}
