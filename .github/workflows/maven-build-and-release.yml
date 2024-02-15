@@ -44,7 +44,7 @@ jobs:
         if: success() && env.CREATE_RELEASE == 'True'
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
-           zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${REPO_NAME}.zip" "${GITHUB_WORKSPACE}/target/"
+           zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${REPO_NAME}.zip" "${GITHUB_WORKSPACE}/${{ inputs.release_dir }}/"
 
       - name: Upload Release Asset (x64)
         if: success() && env.CREATE_RELEASE == 'True'
