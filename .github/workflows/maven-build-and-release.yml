@@ -44,11 +44,15 @@ jobs:
           path: target/*.hpi
           retention-days: 5
 
+      - name: Setup build env
+        run: |
+          repoName=$(echo "${{ github.repository }}" | awk -F'/' '{print $NF}')
+          echo "REPO_NAME=$repoName" >> $GITHUB_ENV 
       - name: Archive Files
         if: success() && ${{ inputs.release_url }} != ''
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
-           zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${REPO_NAME}.zip" "${GITHUB_WORKSPACE}/${{ inputs.release_dir }}/"
+           zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${env.REPO_NAME}.zip" "${GITHUB_WORKSPACE}/target/"
 
       - name: Upload Release Asset (x64)
         if: success() && ${{ inputs.release_url }} != ''
@@ -58,7 +62,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ inputs.release_url }}
-          asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}.zip
+          asset_path: ${{ github.workspace }}/zip/Keyfactor/${{ env.REPO_NAME}}.zip
           asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
 
