@@ -1,4 +1,4 @@
-{# Boilderplate section #}
+{# Boilerplate section #}
 # {{ name }}
 
 {{ description }}
@@ -14,7 +14,7 @@
 {{ name }} {{ shared.support_statement[support_level] }}
 
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
-{# End of Boilderplate section #}
+{# End of Boilerplate section #}
 ---
 {# Important information can go in the readme-pre.md to appear near the top of the document #}
 {% include "./readme-src/readme-pre.md" ignore missing %}
