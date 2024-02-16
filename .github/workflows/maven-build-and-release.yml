@@ -69,11 +69,11 @@ jobs:
           asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
 
-      - name: Delete Failed Release
-        if: failure() && ${{ inputs.release_url }} != ''
-        id: delete-failed-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
+      #- name: Delete Failed Release
+      #  if: failure() && ${{ inputs.release_url }} != ''
+      #  id: delete-failed-release
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  run: |
+      #    gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
 
