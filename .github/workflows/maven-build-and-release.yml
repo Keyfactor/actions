@@ -52,7 +52,7 @@ jobs:
         if: success() && ${{ inputs.release_url }} != ''
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
-           zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${{env.REPO_NAME}}.zip" "${GITHUB_WORKSPACE}/target/"
+           zip -j -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${{env.REPO_NAME}}.zip" -i *.hpi
 
       - name: Upload Release Asset (x64)
         if: success() && ${{ inputs.release_url }} != ''
