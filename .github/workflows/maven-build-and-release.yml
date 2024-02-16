@@ -54,7 +54,7 @@ jobs:
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
            pushd "${GITHUB_WORKSPACE}/target" # Replace with ${{ inputs.release_dir }} when read from json is fixed
-           ls "${GITHUB_WORKSPACE}/zip/Keyfactor"
+           pwd && ls
            zip -j -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${{env.REPO_NAME}}.zip" -i Signum-Signer.hpi
            ls "${GITHUB_WORKSPACE}/zip/Keyfactor"
 
