@@ -109,7 +109,7 @@ jobs:
   call-maven-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'Java'
-    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@ab#53428-maven-build
+    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@release-2.4
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
