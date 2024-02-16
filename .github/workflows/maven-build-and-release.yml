@@ -15,6 +15,10 @@ on:
         description: The relative directory inside the repo where the build artifacts to publish for release will be located
         required: false # leave empty for non-release build
         type: string
+      create_release:
+        description: The trigger to upload the build artifacts
+        required: false # leave empty for non-release build
+        type: string
     secrets:
       token:
         description: 'Secret token from caller workflow to access private packages'
@@ -41,13 +45,13 @@ jobs:
           retention-days: 5
 
       - name: Archive Files
-        if: success() && env.CREATE_RELEASE == 'True'
+        if: success() && ${{ inputs.release_url }} != ''
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
            zip -r -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${REPO_NAME}.zip" "${GITHUB_WORKSPACE}/${{ inputs.release_dir }}/"
 
       - name: Upload Release Asset (x64)
-        if: success() && env.CREATE_RELEASE == 'True'
+        if: success() && ${{ inputs.release_url }} != ''
         id: upload-release-asset-x64
         uses: keyfactor/upload-release-asset@v1
         env:
@@ -59,7 +63,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Delete Failed Release
-        if: failure() && env.CREATE_RELEASE == 'True'
+        if: failure() && ${{ inputs.release_url }} != ''
         id: delete-failed-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
