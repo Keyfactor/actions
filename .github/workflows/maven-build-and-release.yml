@@ -26,6 +26,7 @@ on:
 
 jobs:
   update_release_draft:
+    name: Build and Possibly release maven hpi artifact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +53,7 @@ jobs:
         if: success() && ${{ inputs.release_url }} != ''
         run: |
            mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
-           pushd "${GITHUB_WORKSPACE}/${{ inputs.release_dir }}"
+           pushd "${GITHUB_WORKSPACE}/target" # Replace with ${{ inputs.release_dir }} when read from json is fixed
            zip -j -q  "${GITHUB_WORKSPACE}/zip/Keyfactor/${{env.REPO_NAME}}.zip" -i *.hpi
 
       - name: Upload Release Asset (x64)
