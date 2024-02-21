@@ -12,17 +12,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        name: Checkout project
         with:
           token: ${{ secrets.token }}
 
       - uses: actions/checkout@v4
+        name: Checkout templates
         with:
           repository: 'Keyfactor/actions'
           path: './actions/'
           token: ${{ secrets.token }}
-          ref: 'v2' # Update this tag for testing new readme templates branches
-
+          ref: 'release-2.4' # Update this tag for testing new readme templates branches
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
+        name: Merge template and manifest with jinja2
         with:
           template: ./actions/readme-templates/readme.md.tpl
           output_file: README.md
@@ -36,6 +38,7 @@ jobs:
         run: echo $(cat README.md)
         
       - uses: Keyfactor/add-and-commit@v9.1.4
+        name: Commit generated README
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

@@ -20,14 +20,14 @@
 {% include "./readme-src/readme-pre.md" ignore missing %}
 ---
 {# Additional {{ integration_type }} platform template includes will go in this next section #}
-{% if ((integration_type == "ca-gateway") or (integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider")) %}
+{% if ((integration_type == "ca-gateway") or (integration_type == "anyca-gateway") or (integration_type == "orchestrator") or (integration_type == "pam") or (integration_type == "terraform-provider")) %}
 {% if (integration_type == "orchestrator") %}
 {% include "./actions/readme-templates/readme_platform_orchestrator.md" %}
 {% endif %}
 {% if (integration_type == "pam") and (about is defined) %}
 {% include "./actions/readme-templates/readme_platform_pam.md" %}
 {% endif %}
-{% if (integration_type == "ca-gateway") %}
+{% if ((integration_type == "ca-gateway") or (integration_type == "anyca-gateway")) %}
 {% include "./actions/readme-templates/readme_platform_cagateway.md" %}
 {% endif %}
 ---
