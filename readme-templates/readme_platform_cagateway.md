@@ -6,7 +6,7 @@ This gateway extension was compiled against version {{ gateway_framework }} of t
 {% endif %}
 
 {% if (integration_type == "anyca-gateway")  %}
-This gateway extension was compiled against version {{ gateway_framework }} of the AnyCA Gateway REST Framework.  You will need at least this version of the framework Installed.  If you have a later AnyGateway Framework Installed you will probably need to add binding redirects in the CAProxyServer.exe.config file to make things work properly.
+This gateway extension was compiled against version {{ gateway_framework }} of the AnyCA Gateway REST Framework.  You will need at least this version of the framework Installed.  
 {% endif %}
 
 
