@@ -18,7 +18,7 @@ on:
         required: true
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY: keyfactor
 
 jobs:
   setup:
@@ -94,9 +94,9 @@ jobs:
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # registry: ${{ env.REGISTRY }} # Remove for dockerhub
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PWD }}
 
       # Build and push Docker image with Buildx
       # https://github.com/docker/build-push-action
@@ -164,9 +164,9 @@ jobs:
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # registry: ${{ env.REGISTRY }} # Remove for dockerhub
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PWD }}
 
       # Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
       - name: Create manifest list and push
