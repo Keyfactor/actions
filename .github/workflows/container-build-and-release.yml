@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Set IMAGE_NAME
         run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" | tee -a ${GITHUB_ENV}
 
       # Checkout code
       # https://github.com/actions/checkout
@@ -135,7 +135,7 @@ jobs:
     steps:
       - name: Set IMAGE_NAME
         run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" | tee -a ${GITHUB_ENV}
           echo "PUSH_IMAGE = ${{ needs.get-release-values.outputs.PUSH_IMAGE }}"
 
       # Download digests
