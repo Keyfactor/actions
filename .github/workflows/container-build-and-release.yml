@@ -13,7 +13,10 @@ on:
         type: string # like linux/amd64,linux/arm64
 
     secrets:
-      token:
+      docker-user:
+        description: 'Secret token from caller workflow to access private packages'
+        required: true
+      docker-token:
         description: 'Secret token from caller workflow to access private packages'
         required: true
 
@@ -95,8 +98,8 @@ jobs:
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           # registry: ${{ env.REGISTRY }} # Remove for dockerhub
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PWD }}
+          username: ${{ secrets.docker-user }}
+          password: ${{ secrets.docker-token }}
 
       # Build and push Docker image with Buildx
       # https://github.com/docker/build-push-action
