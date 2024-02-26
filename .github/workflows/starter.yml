@@ -14,6 +14,12 @@ on:
       gpg_pass:
         description: 'GPG Passphrase'
         required: true
+      docker-user:
+        description: 'DockerHub User'
+        required: true
+      docker-token:
+        description: 'DockerHub token'
+        required: true
 
 
 jobs:
@@ -99,12 +105,13 @@ jobs:
   call-container-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
-    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v2
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@release-2.4
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
     secrets: 
-      token: ${{ secrets.GITHUB_TOKEN }}
+      docker-user: ${{ secrets.docker-user }}
+      docker-token: ${{ secrets.docker-token }}
 
   call-maven-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
