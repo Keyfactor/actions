@@ -168,8 +168,8 @@ jobs:
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           # registry: ${{ env.REGISTRY }} # Remove for dockerhub
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PWD }}
+          username: ${{ secrets.docker-user }}
+          password: ${{ secrets.docker-token }}
 
       # Create manifest list and push if: needs.get-release-values.outputs.PUSH_IMAGE == true
       - name: Create manifest list and push
