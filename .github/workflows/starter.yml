@@ -16,10 +16,10 @@ on:
         required: true
       docker-user:
         description: 'DockerHub User'
-        required: true
+        required: false
       docker-token:
         description: 'DockerHub token'
-        required: true
+        required: false
 
 
 jobs:

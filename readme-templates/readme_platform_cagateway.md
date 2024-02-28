@@ -6,8 +6,8 @@ The Keyfactor gateway framework implements common logic shared across various ga
 
 This gateway extension was compiled against version {{ gateway_framework }} of the AnyCA Gateway 
 {%- if (integration_type == "ca-gateway")  %} DCOM{% endif %} 
-{%- if (integration_type == "anyca-gateway")  %} REST{% endif %} Framework.  You will need at least this version of the framework Installed.  
-{% if (integration_type == "ca-gateway")  %} If you have a later AnyGateway Framework Installed you will probably need to add binding redirects in the CAProxyServer.exe.config file to make things work properly.{% endif %}
+{%- if (integration_type == "anyca-plugin")  %} REST{% endif %} Framework.  You will need at least this version of the framework Installed.  
+{%- if (integration_type == "ca-gateway")  %} If you have a later AnyGateway Framework Installed you will probably need to add binding redirects in the CAProxyServer.exe.config file to make things work properly.{% endif %}
 
 
 [Keyfactor CAGateway Install Guide](https://software.keyfactor.com/Guides/AnyGateway_Generic/Content/AnyGateway/Introduction.htm)
