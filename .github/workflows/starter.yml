@@ -132,7 +132,7 @@ jobs:
 
   call-update-catalog-workflow:
     if: inputs.update_catalog == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
+    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@ab#54745-fix-catalog-build
     secrets: 
       token: ${{ secrets.token }}
 
