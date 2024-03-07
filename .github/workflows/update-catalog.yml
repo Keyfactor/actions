@@ -17,7 +17,7 @@ jobs:
         with:
           token: ${{ secrets.token }}
           path: './catalog-temp/'
-          repository: 'Keyfactor/integrations-catalog'
+          repository: 'Keyfactor/integrations_test_catalog' # Change back to integrations-catalog after testing
           ref: ab#54745-fix-catalog-build # Comment or change to main when not testing
       
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
