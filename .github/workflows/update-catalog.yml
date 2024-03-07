@@ -11,14 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout project repo
+        uses: actions/checkout@v4
       
-      - uses: actions/checkout@v4
+      - name: Checkout catalog repo
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.token }}
           path: './catalog-temp/'
           repository: 'Keyfactor/integrations_test_catalog' # Change back to integrations-catalog after testing
-          ref: ab#54745-fix-catalog-build # Comment or change to main when not testing
+          ref: main # Comment or change to main when not testing
       
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:
