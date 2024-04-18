@@ -34,4 +34,7 @@
 {% endif %}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
+{% if (integration_type == "orchestrator") %}
+When creating cert store type manually, that store property names and entry parameter names are case sensitive
+{% endif %}
 
