@@ -85,7 +85,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Show github info 
         id: vars
-        run: 
+        run: |
           echo "github.ref_name == ${{github.ref_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo "github.event_name == ${{github.event_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
