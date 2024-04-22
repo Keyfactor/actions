@@ -76,6 +76,25 @@ jobs:
         run: 
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
+  catalog_build_check:
+    runs-on: ubuntu-latest
+    outputs:
+      REBUILD_CATALOG: ${{ steps.vars.outputs.REBUILD_CATALOG }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rebuild Catalog check 
+        id: vars
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" && "(${{ github.event_name }} == 'push' || ${{ github.event_name }}  == 'workflow_dispatch')" ]]; then
+            echo "REBUILD_CATALOG=true" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
+          else
+            echo "REBUILD_CATALOG=false" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
+          fi
+
+
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
@@ -131,8 +150,8 @@ jobs:
       token: ${{ secrets.APPROVE_README_PUSH }}
 
   call-update-catalog-workflow:
-    needs: call-assign-from-json-workflow
-    if: ${{ needs.call-assign-from-json-workflow.outputs.update_catalog }} == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [call-assign-from-json-workflow, catalog_build_check]
+    if: ${{ needs.call-assign-from-json-workflow.outputs.update_catalog }} == 'true' && ${{ needs.catalog_build_check.outputs.REBUILD_CATALOG }} == 'true'
     uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
     secrets: 
       token: ${{ secrets.token }}
