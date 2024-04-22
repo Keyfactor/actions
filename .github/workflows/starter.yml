@@ -76,18 +76,22 @@ jobs:
         run: 
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
-  debug_branches:
+  catalog_build_check:
     runs-on: ubuntu-latest
+    outputs:
+      REBUILD_CATALOG: ${{ steps.vars.outputs.REBUILD_CATALOG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Show github info 
+      - name: Rebuild Catalog check 
         id: vars
         run: |
-          echo "github.ref_name == ${{github.ref_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-          echo "github.event_name == ${{github.event_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.ref_name }}" == "main" && "(${{ github.event_name }} == 'push' || ${{ github.event_name }}  == 'workflow_dispatch')" ]]; then
+            echo "REBUILD_CATALOG=true" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
+          fi
+
 
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
