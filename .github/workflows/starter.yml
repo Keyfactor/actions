@@ -76,6 +76,19 @@ jobs:
         run: 
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
+  debug_branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Show github info 
+        id: vars
+        run: |
+          echo "github.ref_name == ${{github.ref_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo "github.event_name == ${{github.event_name}}"| tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
@@ -130,12 +143,12 @@ jobs:
     secrets:
       token: ${{ secrets.APPROVE_README_PUSH }}
 
-  call-update-catalog-workflow:
-    needs: call-assign-from-json-workflow
-    if: ${{ needs.call-assign-from-json-workflow.outputs.update_catalog }} == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
-    secrets: 
-      token: ${{ secrets.token }}
+  #call-update-catalog-workflow:
+  #  needs: call-assign-from-json-workflow
+  #  if: ${{ needs.call-assign-from-json-workflow.outputs.update_catalog }} == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+  #  uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
+  #  secrets: 
+  #    token: ${{ secrets.token }}
 
   call-repository-configuration-workflow:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
