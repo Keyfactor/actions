@@ -90,6 +90,8 @@ jobs:
         run: |
           if [[ "${{ github.ref_name }}" == "main" && "(${{ github.event_name }} == 'push' || ${{ github.event_name }}  == 'workflow_dispatch')" ]]; then
             echo "REBUILD_CATALOG=true" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
+          else
+            echo "REBUILD_CATALOG=false" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
           fi
 
 
