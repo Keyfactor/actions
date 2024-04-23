@@ -1,6 +1,11 @@
 name: Post release tasks
 on: 
   workflow_call:
+    inputs:
+      REL_VER:
+        type: string
+        description: base tag for release versions
+        required: true
     secrets:
       token:
         description: token
@@ -11,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove prereleases
-        uses: Keyfactor/action-delete-prereleases@v1.0
+        uses: Keyfactor/action-delete-prereleases@versioned-prereleases
         with:
           repo-token: ${{ secrets.V2BUILDTOKEN }}
+          REL_VER: ${{ inputs.REL_VER }}

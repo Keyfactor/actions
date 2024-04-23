@@ -77,7 +77,7 @@ jobs:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@ab#56817-deletePrereleases
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
@@ -143,10 +143,12 @@ jobs:
     secrets: 
       token: ${{ secrets.token }}
 
-  #call-post-release-cleanup-workflow:
-  #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
-  #  if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-  #  uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v2
-  #  secrets: 
-  #    token: ${{ secrets.token }}
+  call-post-release-cleanup-workflow:
+    needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
+    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
+    uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@ab#56817-deletePrereleases
+    with:
+      REL_VER: ${{ needs.call-create-github-release-workflow.outputs.PR_BASE_TAG }}
+    secrets: 
+      token: ${{ secrets.token }}
 
