@@ -132,7 +132,7 @@ jobs:
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
-    if: ${{ needs.call-assign-from-json-workflow.outputs.update_catalog }} == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: needs.call-assign-from-json-workflow.outputs.update_catalog  == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
     secrets: 
       token: ${{ secrets.token }}
