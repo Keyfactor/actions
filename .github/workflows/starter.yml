@@ -126,7 +126,7 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v2
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@ab#57356-doctool
     secrets:
       token: ${{ secrets.APPROVE_README_PUSH }}
 
