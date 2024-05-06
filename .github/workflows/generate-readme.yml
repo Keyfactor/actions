@@ -21,5 +21,5 @@ jobs:
 
       - uses: Keyfactor/doctool@main
         with:
-          token: ${{ secrets.V2BUILDTOKEN }}
+          token: ${{ secrets.token }}
           action: ${{ matrix.action }}
