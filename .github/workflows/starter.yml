@@ -33,12 +33,12 @@ jobs:
     name: Detect Primary Language
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Read primary language
         id: read
-        uses: fiddlermikey/action-get-primary-language@v2
+        uses: keyfactor/action-get-primary-language@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Display type
@@ -53,12 +53,12 @@ jobs:
     name: Check for .goreleaser file
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check file existence
         id: check_files
-        uses: andstor/file-existence-action@v3
+        uses: keyfactor/file-existence-action@v3
         with:
           files: ".goreleaser.y*ml"
 
@@ -68,7 +68,7 @@ jobs:
       platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create an array from platform_list input #  
@@ -82,7 +82,7 @@ jobs:
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v2
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@ab#55122-2.5-harden-security
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}

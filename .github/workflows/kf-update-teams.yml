@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Check for topic kf-customer-private
         id: check_private
-        uses: actions/github-script@v6
+        uses: keyfactor/github-script@v7
         with:
           script: |
             // check existing topics for kf-customer-private
@@ -42,7 +42,7 @@ jobs:
             
       - name: GitHub Script configures teams if not matching excluded topic
         id: update_teams
-        uses: actions/github-script@v6
+        uses: keyfactor/github-script@v7
         env:
           GITHUB_TOKEN: ${{ secrets.token }}
         if: env.IS_PRIVATE != 'T'

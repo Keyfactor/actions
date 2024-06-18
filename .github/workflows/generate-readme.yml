@@ -11,12 +11,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: keyfactor/checkout@v4
         name: Checkout project
         with:
           token: ${{ secrets.token }}
 
-      - uses: actions/checkout@v4
+      - uses: keyfactor/checkout@v4
         name: Checkout templates
         with:
           repository: 'Keyfactor/actions'
