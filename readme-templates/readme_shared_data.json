@@ -9,10 +9,14 @@
       "terraform-provider": "Terraform Provider",
       "terraform-module": "Terraform Module",
       "api-client": "API Client",
+      "ejbca-plugin": "EJBCA Plugin",
+      "signserver-plugin": "SignServer Plugin",
       "integ-template": "Integration Template"
     },
     "descriptions": {
       "api-client": "This API client allows for programmatic management of Keyfactor resources.",
+      "ejbca-client": "This EJBCA extension allows for programmatic management of EJBCA resources.",
+      "signserver-client": "This SignServer extension allows for programmatic management of SignServer resources.",
       "orchestrator": "This repository contains a Universal Orchestrator Extension which is a plugin to the Keyfactor Universal Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.\n\nThe Universal Orchestrator is part of the Keyfactor software distribution and is available via the Keyfactor customer portal. For general instructions on installing Extensions, see the “Keyfactor Command Orchestrator Installation and Configuration Guide” section of the Keyfactor documentation. For configuration details of this specific Extension see below in this readme.\n\nThe Universal Orchestrator is the successor to the Windows Orchestrator. This Orchestrator Extension plugin only works with the Universal Orchestrator and does not work with the Windows Orchestrator.",
       "pam": "Keyfactor supports the retrieval of credentials from 3rd party Privileged Access Management (PAM) solutions. Secret values can normally be stored, encrypted at rest, in the Keyfactor Platform database. A PAM Provider can allow these secrets to be stored, managed, and rotated in an external platform. This integration is usually configured on the Keyfactor Platform itself, where the platform can request the credential values when needed. In certain scenarios, a PAM Provider can instead be run on a remote location in conjunction with a Keyfactor Orchestrator to allow credential requests to originate from a location other than the Keyfactor Platform.",
       "windows-orchestrator": "This repository contains a Windows Orchestrator AnyAgent, which is a plugin to the Keyfactor Windows Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.\n\nThe Windows Orchestrator is part of the Keyfactor software distribution and is available via the Keyfactor customer portal. For general instructions on installing AnyAgents, see the “Keyfactor Command Orchestrator Installation and Configuration Guide” section of the Keyfactor documentation. For configuration details of this specific AnyAgent, see below in this readme.\n\nNote that in Keyfactor Version 9, the Windows Orchestrator have been replaced by the Universal Orchestrator. While this AnyAgent continues to work with the Windows Orchestrator, and the Windows Orchestrator is supported alongside the Universal Orchestrator talking to Keyfactor version 9, AnyAgent plugins cannot be used with the Universal Orchestrator.",
@@ -29,6 +33,8 @@
     },
     "support_statement": {
       "community": "is open source and community supported, meaning that there is no support guaranteed from Keyfactor Support for these tools.",
+      "ejbca": "is open source and community supported, meaning that there is no support guaranteed from Keyfactor Support for these tools.",
+      "signserver": "is open source and community supported, meaning that there is no support guaranteed from Keyfactor Support for these tools.",
       "kf-community": "is open source and supported on best effort level for this tool/library/client.  This means customers can report Bugs, Feature Requests, Documentation amendment or questions as well as requests for customer information required for setup that needs Keyfactor access to obtain. Such requests do not follow normal SLA commitments for response or resolution. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com/",
       "kf-supported": "is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com"
     }
