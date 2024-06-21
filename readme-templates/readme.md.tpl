@@ -12,7 +12,7 @@
 
 ## Support for {{ name }}
 
-{{ name }} {% endif %}{{ shared.support_statement[support_level] }}
+{{ name }}{% endif %} {{ shared.support_statement[support_level] }}
 
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 {# End of Boilerplate section #}
