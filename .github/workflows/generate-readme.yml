@@ -22,7 +22,7 @@ jobs:
           repository: 'Keyfactor/actions'
           path: './actions/'
           token: ${{ secrets.token }}
-          ref: 'v2' # Update this tag for testing new readme templates branches
+          ref: 'ejbca-readme-updates' # Update this tag for testing new readme templates branches - v2
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         name: Merge template and manifest with jinja2
         with:
