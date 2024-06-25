@@ -1,3 +1,4 @@
+{% if (integration_type != "ejbca") and (integration_type != "signserver") %}
 {# Boilerplate section #}
 # {{ name }}
 
@@ -32,6 +33,7 @@
 {% include "./actions/readme-templates/readme_platform_cagateway.md" %}
 {% endif %}
 ---
+{% endif %}
 {% endif %}
 {# the readme_source.md file should be the general README content in markdown form #}
 {% include "readme_source.md" %}
