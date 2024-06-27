@@ -14,12 +14,21 @@ jobs:
       matrix:
         action: [generate-screenshots, generate-repository-docs, lint-manifest]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download repo
+        uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.token }}
 
-      - uses: Keyfactor/doctool@main
+      - name: Download doctool
+        uses: keyfactor/checkout@v4
+        with:
+          repository: 'Keyfactor/actions'
+          path: './doctool/'
+          token: ${{ secrets.token }}
+          ref: 'main' # Update this tag for testing new readme templates branches
+
+      - name: Run doctool action
+        uses: ./doctool/action.yml
         with:
           token: ${{ secrets.token }}
           action: ${{ matrix.action }}
