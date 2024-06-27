@@ -22,7 +22,7 @@ jobs:
       - name: Download doctool
         uses: keyfactor/checkout@v4
         with:
-          repository: 'Keyfactor/actions'
+          repository: 'Keyfactor/doctool'
           path: './doctool/'
           token: ${{ secrets.token }}
           ref: 'main' # Update this tag for testing new readme templates branches
