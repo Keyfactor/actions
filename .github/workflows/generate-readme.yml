@@ -28,7 +28,7 @@ jobs:
           ref: 'main' # Update this tag for testing new readme templates branches
 
       - name: Run doctool action
-        uses: ../doctool/action.yml
+        uses: ../doctool
         with:
           token: ${{ secrets.token }}
           action: ${{ matrix.action }}
