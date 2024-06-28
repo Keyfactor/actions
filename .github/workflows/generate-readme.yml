@@ -15,6 +15,11 @@ jobs:
             echo "github.event_name: ${{ github.event_name }}"
         shell: bash
 
+      - name: Debug Token
+        run: |
+            echo "Token: ${{ secrets.V2BUILDTOKEN }}"
+        shell: bash
+
       - name: Download repo
         uses: keyfactor/checkout@v4
         with:
