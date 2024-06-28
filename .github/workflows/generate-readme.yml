@@ -5,6 +5,8 @@ on:
       token: 
         description: 'Secret token from caller workflow to approve readme'
         required: true
+permissions:
+  contents: write
 
 jobs:
   update-docs:
@@ -17,7 +19,7 @@ jobs:
 
       - name: Debug Token
         run: |
-            echo "Token: ${{ secrets.V2BUILDTOKEN }}"
+            echo "Token: ${{ secrets.GITHUB_TOKEN }}"
         shell: bash
 
       - name: Download repo
