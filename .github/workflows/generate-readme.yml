@@ -10,9 +10,9 @@ jobs:
   update-docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Debug Token
+      - name: Debug github.event_name
         run: |
-            echo "Token: ${{ secrets.token }}"
+            echo "github.event_name: ${{ github.event_name }}"
         shell: bash
 
       - name: Download repo
