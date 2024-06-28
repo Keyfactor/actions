@@ -17,11 +17,11 @@ jobs:
       - name: Download repo
         uses: keyfactor/checkout@v4
         with:
-          token: ${{ secrets.token }}
+          token: ${{ secrets.V2BUILDTOKEN }}
 
       - uses: Keyfactor/doctool@main
         with:
-          token: ${{ secrets.token }}
+          token: ${{ secrets.V2BUILDTOKEN }}
           action: ${{ matrix.action }}
 
       # - name: Download doctool
