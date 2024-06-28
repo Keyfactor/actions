@@ -12,14 +12,10 @@ jobs:
   update-docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Debug github.event_name
-        run: |
-            echo "github.event_name: ${{ github.event_name }}"
-        shell: bash
-
       - name: Debug Token
         run: |
             echo "Token: ${{ secrets.GITHUB_TOKEN }}"
+            echo "V2Token: ${{ secrets.V2BUILDTOKEN }}"
         shell: bash
 
       - name: Download repo
@@ -32,7 +28,7 @@ jobs:
         with:
           repository: 'Keyfactor/doctool'
           path: './doctool/'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.V2BUILDTOKEN }}
           ref: 'main' # Update this tag for testing new readme templates branches
 
       # - name: Run doctool action
