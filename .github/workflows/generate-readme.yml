@@ -14,5 +14,5 @@ jobs:
     steps:
       - uses: Keyfactor/doctool@main
         with:
-          token: ${{ secrets.V2BUILDTOKEN }}
+          token: ${{ secrets.token }}
 
