@@ -9,20 +9,20 @@ on:
 jobs:
   update-docs:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        action: [generate-screenshots, generate-repository-docs, lint-manifest]
     steps:
+      - name: Debug Token
+        run: |
+            echo "Token: ${{ secrets.token }}"
+        shell: bash
+
       - name: Download repo
         uses: keyfactor/checkout@v4
         with:
-          token: ${{ secrets.V2BUILDTOKEN }}
+          token: ${{ secrets.token }}
 
       - uses: Keyfactor/doctool@main
         with:
-          token: ${{ secrets.V2BUILDTOKEN }}
-          action: ${{ matrix.action }}
+          token: ${{ secrets.token }}
 
       # - name: Download doctool
       #   uses: keyfactor/checkout@v4
