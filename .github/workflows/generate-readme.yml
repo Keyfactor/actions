@@ -27,20 +27,21 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: Keyfactor/doctool@main
+      - name: Download doctool
+        uses: keyfactor/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: 'Keyfactor/doctool'
+          path: './doctool/'
+          token: ${{ secrets.token }}
+          ref: 'main' # Update this tag for testing new readme templates branches
 
-      # - name: Download doctool
-      #   uses: keyfactor/checkout@v4
-      #   with:
-      #     repository: 'Keyfactor/doctool'
-      #     path: './doctool/'
-      #     token: ${{ secrets.token }}
-      #     ref: 'main' # Update this tag for testing new readme templates branches
+      - name: Run doctool action
+        uses: ../doctool
+        with:
+          token: ${{ secrets.token }}
+          action: ${{ matrix.action }}
 
-      # - name: Run doctool action
-      #   uses: ../doctool
+      # - uses: Keyfactor/doctool@main
       #   with:
-      #     token: ${{ secrets.token }}
-      #     action: ${{ matrix.action }}
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+
