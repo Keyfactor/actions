@@ -32,14 +32,13 @@ jobs:
         with:
           repository: 'Keyfactor/doctool'
           path: './doctool/'
-          token: ${{ secrets.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: 'main' # Update this tag for testing new readme templates branches
 
       - name: Run doctool action
-        uses: ../doctool
+        uses: ../doctool/
         with:
-          token: ${{ secrets.token }}
-          action: ${{ matrix.action }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # - uses: Keyfactor/doctool@main
       #   with:
