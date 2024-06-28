@@ -5,44 +5,14 @@ on:
       token: 
         description: 'Secret token from caller workflow to approve readme'
         required: true
+permissions:
+  contents: write
 
 jobs:
-  generate-readme:
+  update-docs:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-        name: Checkout project
+      - uses: Keyfactor/doctool@main
         with:
           token: ${{ secrets.token }}
 
-      - uses: actions/checkout@v4
-        name: Checkout templates
-        with:
-          repository: 'Keyfactor/actions'
-          path: './actions/'
-          token: ${{ secrets.token }}
-          ref: 'v2' # Update this tag for testing new readme templates branches
-      - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
-        name: Merge template and manifest with jinja2
-        with:
-          template: ./actions/readme-templates/readme.md.tpl
-          output_file: README.md
-          data_file: |
-            integration-manifest.json
-            ./actions/readme-templates/readme_shared_data.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Show generated README.md
-        run: echo $(cat README.md)
-        
-      - uses: Keyfactor/add-and-commit@v9.1.4
-        name: Commit generated README
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          add: README.md --force
-          message: Update generated README
-          author_name: Keyfactor
-          author_email: keyfactor@keyfactor.github.io
