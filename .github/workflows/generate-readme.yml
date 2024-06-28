@@ -25,11 +25,11 @@ jobs:
       - name: Download repo
         uses: keyfactor/checkout@v4
         with:
-          token: ${{ secrets.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: Keyfactor/doctool@main
         with:
-          token: ${{ secrets.token }}
+          token: ${{ secrets.V2BUILDTOKEN }}
 
       # - name: Download doctool
       #   uses: keyfactor/checkout@v4
