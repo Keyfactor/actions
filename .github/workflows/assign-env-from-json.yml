@@ -31,13 +31,13 @@ jobs:
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: checkout-json-file
-        uses: actions/checkout@v3
+        uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: src
 
       - name: checkout-action
-        uses: actions/checkout@v3
+        uses: keyfactor/checkout@v4
         with:
           repository: fiddlermikey/assign-from-json
           path: tools
@@ -67,6 +67,15 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'update_catalog'
 
+      - name: Read pam_support property
+        if: steps.read-type.outputs.output-value == 'orchestrator' 
+        uses: ./tools
+        id: read-pam_support
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.pam_support'
+          required-value: 'false'
+
       - name: Read UOFramework property
         if: steps.read-type.outputs.output-value == 'orchestrator' 
         uses: ./tools
@@ -75,7 +84,16 @@ jobs:
           input-file: 'src/integration-manifest.json'
           input-property: 'about.orchestrator.UOFramework'
 
+      - name: Read keyfactor_platform_version property
+        if: steps.read-type.outputs.output-value == 'orchestrator' && steps.read-pam_support.outputs.output-value == 'true'
+        uses: ./tools
+        id: read-keyfactor_platform_version
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'about.orchestrator.keyfactor_platform_version'
+
       - name: Read release_dir property 
+        if: steps.read-type.outputs.output-value == 'orchestrator' || steps.read-type.outputs.output-value == 'ca-gateway' || steps.read-type.outputs.output-value == 'pam' || steps.read-type.outputs.output-value == 'anyca-plugin'  
         uses: ./tools
         id: read-release_dir
         with:
@@ -92,10 +110,17 @@ jobs:
       - name: Write variables to Summary
         id: adding-final-markdown
         run: |
-          echo "###  ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
-          echo "###  ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
-          echo "###  ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "###  Integration Manifest Properties:" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-name.outputs.output-property }} &colon; ${{ steps.read-name.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-type.outputs.output-property }} &colon; ${{ steps.read-type.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          echo "* ${{ steps.read-update_catalog.outputs.output-property }} &colon; ${{ steps.read-update_catalog.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.read-type.outputs.output-value }}" == 'orchestrator' ]]; then
+            echo "* ${{ steps.read-UOFramework.outputs.output-property }} &colon; ${{ steps.read-UOFramework.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            echo "* ${{ steps.read-pam_support.outputs.output-property }} &colon; ${{ steps.read-pam_support.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            if [[ "${{ steps.read-pam_support.outputs.output-value }}" == 'true' ]]; then
+              echo "* ${{ steps.read-keyfactor_platform_version.outputs.output-property }} &colon; ${{ steps.read-keyfactor_platform_version.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+            fi
+          fi
+          echo "* ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
 
 

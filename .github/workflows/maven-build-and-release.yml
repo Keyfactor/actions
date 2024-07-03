@@ -1,0 +1,79 @@
+name: Build Java project with Maven and potentially upload the release
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: The release version to use when publishing a build
+        required: false
+        type: string
+        default: 1.0.0 # for non-released builds
+      release_url:
+        description: The url to upload a publsihed release
+        required: false # leave empty for non-release build
+        type: string
+      release_dir:
+        description: The relative directory inside the repo where the build artifacts to publish for release will be located
+        required: false # leave empty for non-release build
+        type: string
+      create_release:
+        description: The trigger to upload the build artifacts
+        required: false # leave empty for non-release build
+        type: string
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access private packages'
+        required: true
+
+jobs:
+  update_release_draft:
+    name: Build and Possibly release maven hpi artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: keyfactor/checkout@v4
+      - name: Setup REPO_NAME
+        run: |
+          repoName=$(echo "${{ github.repository }}" | awk -F'/' '{print $NF}')
+          echo "REPO_NAME=$repoName" >> $GITHUB_ENV 
+      - name: Set up JDK 11
+        uses: keyfactor/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Package with Maven
+        run: mvn package
+      - name: 'Upload Artifact'
+        uses: keyfactor/upload-artifact@v4
+        with:
+          name: hpi-artifact
+          path: target/*.hpi
+          retention-days: 5
+
+      - name: Archive Files
+        if: success() && ${{ inputs.release_url }} != ''
+        run: |
+           mkdir -p "${GITHUB_WORKSPACE}/zip/Keyfactor"
+           pushd "${GITHUB_WORKSPACE}/target" # Replace with ${{ inputs.release_dir }} when read from json is fixed
+           zip "${GITHUB_WORKSPACE}/zip/Keyfactor/${{env.REPO_NAME}}.zip" *.hpi
+           ls "${GITHUB_WORKSPACE}/zip/Keyfactor"
+
+      - name: Upload Release Asset (x64)
+        if: success() && ${{ inputs.release_url }} != ''
+        id: upload-release-asset-x64
+        uses: keyfactor/upload-release-assets@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ inputs.release_url }}
+          asset_path: ${{ github.workspace }}/zip/Keyfactor/${{ env.REPO_NAME}}.zip
+          asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
+          asset_content_type: application/zip
+
+      #- name: Delete Failed Release
+      #  if: failure() && ${{ inputs.release_url }} != ''
+      #  id: delete-failed-release
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  run: |
+      #    gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
+
