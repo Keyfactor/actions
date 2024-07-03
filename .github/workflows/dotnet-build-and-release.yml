@@ -29,17 +29,17 @@ jobs:
   dotnet-build-and-release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: keyfactor/checkout@v4
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: keyfactor/setup-dotnet@v4
         with:
           dotnet-version: |
             3.1.x
             6.0.x
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1
+        uses: keyfactor/setup-msbuild@v2
 
       - name: Setup build environment
         id: setup_env
@@ -104,7 +104,7 @@ jobs:
       - name: Upload Release Asset (x64)
         if: success() && env.CREATE_RELEASE == 'True'
         id: upload-release-asset-x64
-        uses: keyfactor/upload-release-asset@v1
+        uses: keyfactor/upload-release-assets@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
