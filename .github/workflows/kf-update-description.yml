@@ -12,7 +12,7 @@ jobs:
     name: A CI job to read the description from integration-manifest.json
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: keyfactor/checkout@v4
         with:
           repo-token: ${{ secrets.token}}
       - name: Update description from integration-manifest.json

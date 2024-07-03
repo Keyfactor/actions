@@ -13,7 +13,7 @@ jobs:
     if: needs.get-manifest-properties.outputs.integration_type == 'orchestrator' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     steps:
       - name: Trigger update-stores workflow on kfutil
-        uses: peter-evans/repository-dispatch@v2
+        uses: keyfactor/repository-dispatch@v3
         with:
           token: ${{ secrets.SDK_SYNC_PAT }}
           repository: keyfactor/kfutil

@@ -15,4 +15,3 @@ jobs:
       - uses: Keyfactor/doctool@main
         with:
           token: ${{ secrets.token }}
-
