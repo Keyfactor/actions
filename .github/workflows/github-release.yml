@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: keyfactor/checkout@v4
 
       - name: Display base.ref from Pull Request
         if: github.event_name == 'pull_request'
@@ -139,7 +139,7 @@ jobs:
       - name: Set semver info
         id: set-semver-info
         if:  needs.create-github-release-workflow.outputs.LATEST_TAG != ''        
-        uses: fiddlermikey/action-bump-semver@main
+        uses: keyfactor/action-bump-semver@v1
         with:
           current_version: ${{ needs.create-github-release-workflow.outputs.LATEST_TAG}}
           level: ${{ needs.create-github-release-workflow.outputs.INC_LEVEL}}
