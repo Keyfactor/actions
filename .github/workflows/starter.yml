@@ -5,7 +5,8 @@ on:
       token:
         description: 'GitHub token'
         required: true
-## This secret is not used. It should be removed when the v3 bootstrap has been updated
+## This secret 'APPROVE_README_PUSH' is not used. 
+## Remove when the v3 bootstrap has been updated
       APPROVE_README_PUSH:
         description: 'Token to add-and-commit generated readme'
         required: true  
