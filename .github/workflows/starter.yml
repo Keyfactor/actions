@@ -150,7 +150,7 @@ jobs:
 
   call-polaris-scan-workflow:
     if: github.event_name == 'push' && (startsWith(github.ref_name, 'release-') || github.ref_name == 'main')
-    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@add-polaris
+    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v3
     secrets:
       token: ${{ secrets.scan_token }}
 
