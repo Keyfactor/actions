@@ -42,7 +42,7 @@ jobs:
           }
 
       - name: find latest tag
-        uses: oprypin/find-latest-tag@v1
+        uses: keyfactor/find-latest-tag@v1
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.targetRepo }}  
           releases-only: true  
@@ -50,7 +50,7 @@ jobs:
         id: latestReleaseTag  
 
       - name: Download Release Asset
-        uses: robinraju/release-downloader@v1.4
+        uses: keyfactor/release-downloader@v1.4
         with:
           repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
           token: ${{ secrets.token }}
@@ -85,7 +85,7 @@ jobs:
       - name: Upload Release Asset (x64)
         if: success()
         id: upload-release-asset
-        uses: ncipollo/release-action@v1
+        uses: keyfactor/release-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
