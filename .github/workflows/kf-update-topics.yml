@@ -13,7 +13,7 @@ jobs:
     name: A test job to read the integration_type from integration-manifest.json
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           repo-token: ${{ secrets.token}}
       - name: Update topic from integration_type

@@ -1,6 +1,4 @@
-### 👨🏿‍🚀 Actions v3 Workflows 
-
-#### The v3 Actions make use of doctool.
+### 👨🏿‍🚀 Actions v2 Workflows 
 
 These workflows are designed to work with the latest [keyfactor-bootstrap-workflow.yml "Keyfactor Bootstrap Workflow"](https://github.com/Keyfactor/.github/blob/main/workflow-templates/keyfactor-bootstrap-workflow.yml)
 This *bootstrap workflow* passes 2 secrets to the starter.yml workflow. If you are testing or developing from a forked copy of this repository, but sure to set the secrets:
@@ -12,7 +10,7 @@ The following are used for go lang builds and are set at the organization level.
 * gpg_key: This is a private gpg key stored as a secret
 * gpg_pass: This is th private gpg passphrase stored as a secret
 
-### 🚀The Bootstrap workflow for v3 Actions perform the following steps: 
+### 🚀The Bootstrap workflow for v2 Actions perform the following steps: 
 
 * Checkout integration repository
 * Get values from integration-manifest.json [***assign-env-from-json***]

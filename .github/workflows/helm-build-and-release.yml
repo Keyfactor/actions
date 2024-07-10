@@ -64,15 +64,15 @@ jobs:
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
       # Checkout code
-      # https://github.com/keyfactor/checkout
+      # https://github.com/actions/checkout
       - name: Checkout code
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: keyfactor/metadata-action@v5.5.1
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} 
           tags: |
@@ -81,18 +81,18 @@ jobs:
       # Set up QEMU
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
-        uses: keyfactor/setup-qemu-action@v3.0.0
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
 
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       # https://github.com/docker/setup-buildx-action
       - name: Set up Docker Buildx
-        uses: keyfactor/setup-buildx-action@v3.3.0
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       # Login to Docker registry
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        uses: keyfactor/login-action@v3.2.0
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           # registry: ${{ env.REGISTRY }} # Remove for dockerhub
           username: ${{ secrets.DOCKER_USER }}
@@ -102,7 +102,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         id: build
-        uses: keyfactor/build-push-action@v6.0.1
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           context: .
           platforms: ${{ matrix.platform }}
@@ -119,7 +119,7 @@ jobs:
 
       # Upload digest
       - name: Upload digest
-        uses: keyfactor/upload-artifact@v4
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: digests
           path: /tmp/digests/*
@@ -138,7 +138,7 @@ jobs:
       # Download digests
       # https://github.com/actions/download-artifact
       - name: Download digests
-        uses: keyfactor/download-artifact@v4.1.7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: digests
           path: /tmp/digests
@@ -147,13 +147,13 @@ jobs:
       # multi-platform images and export cache
       # https://github.com/docker/setup-buildx-action
       - name: Set up Docker Buildx
-        uses: keyfactor/setup-buildx-action@v3.3.0
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: keyfactor/metadata-action@v5.5.1
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -162,7 +162,7 @@ jobs:
       # Login to Docker registry
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        uses: keyfactor/login-action@v3.2.0
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -191,15 +191,15 @@ jobs:
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
       # Checkout code
-      # https://github.com/keyfactor/checkout
+      # https://github.com/actions/checkout
       - name: Checkout code
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       # Extract metadata (tags, labels) to use in Helm chart
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: keyfactor/metadata-action@v5.5.1
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -218,7 +218,7 @@ jobs:
       # Setup Helm
       # https://github.com/Azure/setup-helm
       - name: Install Helm
-        uses: keyfactor/setup-helm@v4.2.0
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -231,7 +231,7 @@ jobs:
       # Build and release Helm chart to GitHub Pages
       # https://github.com/helm/chart-releaser-action
       - name: Run chart-releaser
-        uses: keyfactor/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@be16258da8010256c6e82849661221415f031968 # v1.5.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:

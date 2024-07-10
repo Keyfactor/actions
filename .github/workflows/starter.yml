@@ -24,7 +24,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v3
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v2
 
   call-get-primary-language:
     outputs:
@@ -33,12 +33,12 @@ jobs:
     name: Detect Primary Language
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Read primary language
         id: read
-        uses: keyfactor/action-get-primary-language@v2
+        uses: fiddlermikey/action-get-primary-language@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Display type
@@ -53,12 +53,12 @@ jobs:
     name: Check for .goreleaser file
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check file existence
         id: check_files
-        uses: keyfactor/file-existence-action@v3
+        uses: andstor/file-existence-action@v3
         with:
           files: ".goreleaser.y*ml"
 
@@ -68,7 +68,7 @@ jobs:
       platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create an array from platform_list input #  
@@ -77,12 +77,12 @@ jobs:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v3
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@v2
 
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v2
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -94,7 +94,7 @@ jobs:
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true' 
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets: 
@@ -105,7 +105,7 @@ jobs:
   call-container-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
-    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v2
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
@@ -116,7 +116,7 @@ jobs:
   call-maven-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'Java'
-    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v2
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -126,20 +126,20 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v2
     secrets:
       token: ${{ secrets.APPROVE_README_PUSH }}
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
     if: needs.call-assign-from-json-workflow.outputs.update_catalog  == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v3
+    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v2
     secrets: 
       token: ${{ secrets.token }}
 
   call-repository-configuration-workflow:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
-    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v3
+    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v2
     secrets: 
       token: ${{ secrets.token }}
 

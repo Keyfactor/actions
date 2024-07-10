@@ -23,11 +23,11 @@ jobs:
   run-goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - uses: keyfactor/checkout@v4
+      - uses: actions/checkout@v4
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
-      - uses: keyfactor/setup-go@v5.0.1
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -41,13 +41,13 @@ jobs:
             echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV"  | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - name: Import GPG key
-        uses: keyfactor/ghaction-import-gpg@v6.1.0
+        uses: crazy-max/ghaction-import-gpg@v6
         id: import_gpg
         with:
           gpg_private_key: ${{ secrets.gpg_key }}
           passphrase: ${{ secrets.gpg_pass }}
       - name: Run GoReleaser
-        uses: keyfactor/goreleaser-action@v6.0.0
+        uses: goreleaser/goreleaser-action@v5
         with:
           args: ${{ env.GO_ARGS }}
         env:
