@@ -22,6 +22,9 @@ on:
       docker-token:
         description: 'DockerHub token'
         required: false
+      scan_token:
+        description: 'Polaris token'
+        required: false
 
 
 jobs:
@@ -144,6 +147,12 @@ jobs:
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v3
     secrets: 
       token: ${{ secrets.token }}
+
+  call-polaris-scan-workflow:
+    if: github.event_name == 'push' && (startsWith(github.ref_name, 'release-') || github.ref_name == 'main')
+    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v3
+    secrets:
+      token: ${{ secrets.scan_token }}
 
   #call-post-release-cleanup-workflow:
   #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
