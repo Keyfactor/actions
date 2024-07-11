@@ -7,6 +7,12 @@ on:
       token:
         description: 'Secret token from caller workflow to access private packages'
         required: true
+    inputs:
+      scan_branch:
+        description: Incoming branch to release or main
+        required: true
+        type: string
+      
   
   
   
@@ -25,13 +31,13 @@ jobs:
           polaris_assessment_types: "SCA,SAST"
           polaris_application_id: 'Integrations'
           polaris_project_id: ${{ github.event.repository.name }}
-          polaris_branch_id: ${{ github.ref_name }}
+          polaris_branch_id: ${{ inputs.scan_branch }}
           
           ## SCANNING: Optional fields
           polaris_application_name: 'Integrations'
           polaris_project_name: ${{ github.event.repository.name }}
           polaris_assessment_mode: "SOURCE_UPLOAD"
-          polaris_branch_name: ${{ github.ref_name }}
+          polaris_branch_name: ${{ github.scan_branch }}
           
           # ## PULL REQUEST COMMENTS: Uncomment below to enable
           # polaris_prComment_enabled: false
