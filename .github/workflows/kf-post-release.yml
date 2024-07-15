@@ -5,6 +5,11 @@ on:
       token:
         description: token
         required: true
+    inputs:
+      branchname:
+        description: Release branch tag being merged to main
+        required: true
+        type: string
 
 jobs:
   clean-releases:
@@ -13,4 +18,13 @@ jobs:
       - name: Remove prereleases
         uses: Keyfactor/action-delete-prereleases@v1.0
         with:
-          repo-token: ${{ secrets.V2BUILDTOKEN }}
+          token: ${{ secrets.token }}
+
+      - name: Create PR to main
+        uses: Keyfactor/action-pull-request@v0.5.5
+        with:
+          github_token: ${{ secrets.token }}
+          source_branch: ${{ inputs.branchname }}
+          target_branch: main
+          title: Merge ${{ inputs.branchname }} to main
+          body: "Merge ${{ inputs.branchname }} to main - Automated PR"
