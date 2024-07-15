@@ -11,6 +11,9 @@ on:
       IS_FULL_RELEASE:
         description: The upload URL for build artifacts for this release
         value: ${{ jobs.create-github-release-workflow.outputs.IS_FULL_RELEASE }}
+      PR_BASE_TAG:
+        description: major.min version
+        value: ${{ jobs.create-github-release-workflow.outputs.PR_BASE_TAG }}
   pull_request:
     types: [opened, closed, edited, synchronize]
   push:
