@@ -156,10 +156,12 @@ jobs:
     secrets:
       token: ${{ secrets.scan_token }}
 
-  #call-post-release-cleanup-workflow:
-  #  needs: [call-dotnet-build-and-release-workflow, call-assign-from-json-workflow, call-create-github-release-workflow]
-  #  if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-  #  uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v2
-  #  secrets: 
-  #    token: ${{ secrets.token }}
-
+  call-post-release-cleanup-workflow:
+   needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
+   if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
+   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@post-release-tasks_ab#56816
+   secrets: 
+     token: ${{ secrets.token }}
+   with:
+     branchname: ${{ github.event.pull_request.head.ref }}
+     release_version: needs.call-create-github-release-workflow.outputs.PR_BASE_TAG
