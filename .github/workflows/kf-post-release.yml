@@ -18,7 +18,7 @@ jobs:
       - name: Remove prereleases
         uses: Keyfactor/action-delete-prereleases@v1.0
         with:
-          repo-token: ${{ secrets.token }}
+          token: ${{ secrets.token }}
 
       - name: Create PR to main
         uses: Keyfactor/action-pull-request@v0.5.5
