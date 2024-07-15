@@ -164,4 +164,4 @@ jobs:
      token: ${{ secrets.token }}
    with:
      branchname: ${{ github.event.pull_request.head.ref }}
-     release_version: needs.call-create-github-release-workflow.outputs.PR_BASE_TAG
+     release_version: ${{ needs.call-create-github-release-workflow.outputs.PR_BASE_TAG }}
