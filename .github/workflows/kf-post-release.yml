@@ -23,7 +23,7 @@ jobs:
       - name: Create PR to main
         uses: Keyfactor/action-pull-request@v0.5.5
         with:
-          repo-token: ${{ secrets.token }}
+          token: ${{ secrets.token }}
           source_branch: ${{ inputs.branchname }}
           target_branch: main
           title: Merge ${{ inputs.branchname }} to main
