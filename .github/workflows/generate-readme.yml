@@ -1,4 +1,4 @@
-name: Generate README from templates and data files
+name: Generate README from templates and data files using doctool
 on:
   workflow_call:
     secrets:
@@ -11,14 +11,8 @@ permissions:
 jobs:
   update-docs:
     runs-on: ubuntu-latest
-    name: Set workflow variables from integration-manifest.json
+    name: Use private doctool action in public repository
     steps:
-      - name: checkout-json-file
-        uses: keyfactor/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: src
-
       - name: checkout-action
         uses: keyfactor/checkout@v4
         with:
@@ -31,8 +25,3 @@ jobs:
         id: launch-doctool
         with:
           token: ${{ secrets.token }}
-
-    # steps:
-    #   - uses: Keyfactor/doctool@main
-    #     with:
-    #       token: ${{ secrets.token }}
