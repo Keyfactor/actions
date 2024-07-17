@@ -16,7 +16,8 @@ on:
       #   type: string
 
 jobs:
-  clean-releases:
+  create-pr-to-main:
+    name: Create PR from release branch to main
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
