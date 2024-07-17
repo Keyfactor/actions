@@ -47,7 +47,7 @@ jobs:
           gpg_private_key: ${{ secrets.gpg_key }}
           passphrase: ${{ secrets.gpg_pass }}
       - name: Run GoReleaser
-        uses: keyfactor/goreleaser-action@v6.0.0
+        uses: keyfactor/goreleaser-action@v5.1.0
         with:
           args: ${{ env.GO_ARGS }}
         env:
