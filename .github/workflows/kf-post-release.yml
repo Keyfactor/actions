@@ -35,6 +35,6 @@ jobs:
           github_token: ${{ secrets.token }}
           source_branch: ${{ inputs.branchname }}
           target_branch: main
-          release_version: ${{ inputs.release_version}}
+          allow_no_diff: true
           title: Merge ${{ inputs.branchname }} to main
           body: "Merge ${{ inputs.branchname }} to main - Automated PR"
