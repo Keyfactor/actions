@@ -6,6 +6,8 @@
 * All actions are being migrated to forks in the keyfactor org for security hardening purposes. AB#55122
   * Access to 3rd party actions will be restrcited in the keyfactor org
   * The keyfactor-action-staging organization can be used for developing workflows that will need to be transferred to the keyfactor org before making it public
+* Post-release workflow added: Auto-create PR from release branch to main
+    * Additional jobs/actions may be added to the kf-post-release.yml workflow in this repository (.github/workflows folder)
 
 These workflows are designed to work with the latest [keyfactor-bootstrap-workflow.yml "Keyfactor Bootstrap v3 Workflow"](https://github.com/Keyfactor/.github/blob/main/workflow-templates/keyfactor-bootstrap-workflow-v3.yml)
 
@@ -32,6 +34,7 @@ These workflows are designed to work with the latest [keyfactor-bootstrap-workfl
 * If the pr is determined to be open or merged but not closed (synchronize), a prerelease artifact will be uploaded
 * If the pr is determined to be merged and closed, a final release is built
 *  Polaris SAST/SCAN scans run when push to release-* or main occurs
+* If PR to release branch is merged/closed, a new PR will be automatically generated. This will need to be approved manually and **should not** be approved for hotfix branches 
 
 
 
