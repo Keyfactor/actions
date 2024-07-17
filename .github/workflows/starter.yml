@@ -159,7 +159,7 @@ jobs:
   call-post-release-workflow:
    needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@post-release-tasks_ab#56816
+   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v3
    secrets: 
      token: ${{ secrets.token }}
    with:
