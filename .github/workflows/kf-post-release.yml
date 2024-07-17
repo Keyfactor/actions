@@ -5,12 +5,36 @@ on:
       token:
         description: token
         required: true
+    inputs:
+      branchname:
+        description: Release branch tag being merged to main
+        required: true
+        type: string
+      # release_version:
+      #   description: Release branch tag being merged to main
+      #   required: true
+      #   type: string
 
 jobs:
-  clean-releases:
+  create-pr-to-main:
+    name: Create PR from release branch to main
     runs-on: ubuntu-latest
     steps:
-      - name: Remove prereleases
-        uses: Keyfactor/action-delete-prereleases@v1.0
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      # - name: Remove prereleases
+      #   uses: Keyfactor/action-delete-prereleases@versioned-prereleases
+      #   with:
+      #     repo-token: ${{ secrets.token }}
+      #     release_version: ${{ inputs.release_version }}
+
+      - name: Create PR to main
+        uses: Keyfactor/action-pull-request@v0.5.5
         with:
-          repo-token: ${{ secrets.V2BUILDTOKEN }}
+          github_token: ${{ secrets.token }}
+          source_branch: ${{ inputs.branchname }}
+          target_branch: main
+          allow_no_diff: true
+          title: Merge ${{ inputs.branchname }} to main
+          body: "Merge ${{ inputs.branchname }} to main - Automated PR"
