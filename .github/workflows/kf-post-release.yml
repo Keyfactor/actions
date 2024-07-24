@@ -10,10 +10,10 @@ on:
         description: Release branch tag being merged to main
         required: true
         type: string
-      # release_version:
-      #   description: Release branch tag being merged to main
-      #   required: true
-      #   type: string
+      release_version:
+        description: Release branch tag being merged to main
+        required: true
+        type: string
 
 jobs:
   create-pr-to-main:
@@ -38,5 +38,5 @@ jobs:
           source_branch: ${{ inputs.branchname }}
           target_branch: main
           allow_no_diff: true
-          title: Merge ${{ inputs.branchname }} to main
+          title: Merge ${{ inputs.release_version }} to main
           body: "Merge ${{ inputs.branchname }} to main - Automated PR"

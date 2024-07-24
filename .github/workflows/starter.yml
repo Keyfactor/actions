@@ -159,9 +159,9 @@ jobs:
   call-post-release-workflow:
    needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v3
+   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@use-release_version-for-pr-title
    secrets: 
      token: ${{ secrets.token }}
    with:
      branchname: ${{ github.event.pull_request.base.ref }}
-#     release_version: ${{ needs.call-create-github-release-workflow.outputs.PR_BASE_TAG }}
+     release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
