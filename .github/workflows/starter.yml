@@ -156,6 +156,19 @@ jobs:
     secrets:
       token: ${{ secrets.scan_token }}
 
+  update-tag:
+    needs: [call-assign-from-json-workflow, call-create-github-release-workflow,call-generate-readme-workflow]
+    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-'))
+    runs-on: ubuntu-latest
+    name: Update the release tag
+    steps:
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+
   call-post-release-workflow:
    needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
