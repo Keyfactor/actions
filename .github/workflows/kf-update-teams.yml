@@ -1,0 +1,69 @@
+name: Update team permissions
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+    inputs:
+      teamArray: 
+        description: Array of arrays denoting teams and permissions 
+        required: false
+        type: string
+        default: '[["field-software-engineers", "push"],["integration-engineers", "push"],["private-access", "pull"], ["release_builders", "admin"]]'
+      exclude-topic: 
+        description: Topic indicating this repo should be skipped
+        required: false
+        type: string
+        default: 'kf-customer-private'
+       
+jobs:
+  update-team-permissions:
+    name: Update Team Permissions for this Repository
+    runs-on: ubuntu-latest
+    outputs:
+      customer_private: ${{ steps.check_private.outputs.is-private }}
+    steps:
+      - name: Check for topic kf-customer-private
+        id: check_private
+        uses: keyfactor/github-script@v7
+        with:
+          script: |
+            // check existing topics for kf-customer-private
+            const topics = await github.rest.repos.getAllTopics({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            });
+            const size = topics.data.names.length;
+            const pos = topics.data.names.indexOf('${{inputs.exclude-topic}}')
+            var IS_PRIVATE=
+            (size > 0 && pos > 0) ? IS_PRIVATE='T' : IS_PRIVATE='F'
+            core.exportVariable('IS_PRIVATE', `${IS_PRIVATE}`);
+            
+      - name: GitHub Script configures teams if not matching excluded topic
+        id: update_teams
+        uses: keyfactor/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+        if: env.IS_PRIVATE != 'T'
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            const teams = ${{inputs.teamArray}}
+            const repo = context.repo.repo
+            const org = context.repo.owner
+            const owner = org
+            console.log(`org: ${org}\nrepo ${repo}`)
+            teams.forEach(element => {
+              console.log(element[0] + ' : ' + element[1])
+              const team_slug = element[0]
+              const permission = element[1]
+              github.rest.teams.addOrUpdateRepoPermissionsInOrg({
+                org,
+                team_slug,
+                owner,
+                repo,
+                permission
+              })
+             })
+

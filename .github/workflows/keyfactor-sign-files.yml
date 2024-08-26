@@ -1,0 +1,102 @@
+name: Sign Binary File Test
+on: 
+  workflow_call:
+    inputs:
+      signFile: 
+        description: The file that will be signed. 
+        required: true
+        type: string
+      targetRepo: 
+        description: The name of the repository to target with signing
+        required: true
+        type: string
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access private packages'
+        required: true
+        
+#######################################################################################################
+# This currently will only run on a self-hosted test VM [integ-test/INTEGTEST/kf-integ-test] using a self-signed cert
+#
+# TODO: 
+#   Update "Download Release Asset" to use updated action from author to obtain latest tag name
+#   Replace "find latest tag" with output from "Download Release Asset"
+#   Accommodate multiple signFile inputs by using a matrix
+#   Move runner group to kf-self-hosted-win-cs to use the kf-runner-cs1 machine onprem, using Code Assure
+#
+#######################################################################################################
+        
+jobs:
+  fetch-assets:
+    runs-on: [self-hosted, kf-self-hosted-win-cs] 
+    steps:
+      - name: clean workspace
+        run: |
+          $FileName = "c:\extract"
+          if (Test-Path $FileName) {
+            Remove-Item -Recurse -Force $FileName
+          }
+          $FileName = "*.zip"
+          if (Test-Path $FileName) {
+            Remove-Item -Force $FileName
+          }
+
+      - name: find latest tag
+        uses: keyfactor/find-latest-tag@v1
+        with:
+          repository: ${{ github.repository_owner }}/${{ inputs.targetRepo }}  
+          releases-only: true  
+          token: ${{ secrets.token }}
+        id: latestReleaseTag  
+
+      - name: Download Release Asset
+        uses: keyfactor/release-downloader@v1.4
+        with:
+          repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
+          token: ${{ secrets.token }}
+          latest: true
+          fileName: "*.zip"
+          github-api-url: "https://keyfactor.com/api/v3"
+
+      - name: Extract Release Asset
+        run: Expand-Archive "*.zip" "c:\extract"
+
+      - name: Sign Extracted File
+        run: |
+          $codeCertificate = Get-ChildItem Cert:\CurrentUser\My | Where-Object {$_.Thumbprint -Like "AF07*43EDF"}
+          # echo "codeCert =  $codeCertificate" >> $env:GITHUB_ENV
+          Set-AuthenticodeSignature -FilePath c:\extract\**\${{ inputs.signFile }} -Certificate $codeCertificate -TimeStampServer http://timestamp.digicert.com
+
+#      - name: create fingerprint
+#        run: Write-Output Add fingerprinting step?
+      
+      - name: package zip
+        run: |
+          $zipName = cmd /c dir /b /l *.zip
+          echo "releaseArtifactName: ${zipName}"
+          echo "releaseArtifactName=${zipName}" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          Compress-Archive -Force -Path c:\extract\* -DestinationPath ${zipName}
+          
+      - name: debug output
+        run: |
+          echo "releaseArtifactName = ${{ env.releaseArtifactName}}"
+          echo "latestReleaseTag = ${{ steps.latestReleaseTag.outputs.tag }}"
+
+      - name: Upload Release Asset (x64)
+        if: success()
+        id: upload-release-asset
+        uses: keyfactor/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ inputs.targetRepo }} 
+          token: ${{ secrets.token }}
+          allowUpdates: true
+          artifacts: ${{ github.workspace }}\${{ env.releaseArtifactName }}
+          name: ${{ steps.latestReleaseTag.outputs.tag }}
+          artifactContentType: application/zip
+          replacesArtifacts: true
+          tag: ${{ steps.latestReleaseTag.outputs.tag }}
+
+          

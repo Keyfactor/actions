@@ -1,0 +1,28 @@
+name: Update Repo Settings
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access SDK repo'
+        required: true
+    
+
+jobs:
+  read_type:
+    runs-on: ubuntu-latest
+    name: A test job to read the integration_type from integration-manifest.json
+    steps:
+      - name: Checkout
+        uses: keyfactor/checkout@v4
+        with:
+          repo-token: ${{ secrets.token}}
+      - name: Update topic from integration_type
+        id: update
+        uses: keyfactor/action-assign-topics@v1.1
+        with:
+          input-file: integration-manifest.json
+          repo-token: ${{ secrets.token}}
+      - name: Display type
+        id: display
+        run: |
+          echo ${{ steps.read.output.dbg-out}}

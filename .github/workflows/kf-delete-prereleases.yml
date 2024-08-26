@@ -1,0 +1,23 @@
+name: Post Release Tasks
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: 'Secret token from caller workflow to access repo'
+        required: true
+    
+
+jobs:
+  remove_prereleases:
+    runs-on: ubuntu-latest
+    name: Deleting prereleases
+    steps:
+      - name: Checkout
+        uses: keyfactor/checkout@v4
+        with:
+          token: ${{ secrets.token}}
+      - name: Run delete-prereleases action
+        id: run-delete
+        uses: keyfactor/action-delete-prereleases@v1.0
+        with:
+          repo-token: ${{ secrets.token}}

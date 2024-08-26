@@ -1,0 +1,21 @@
+name: Merge Orchestrator store_types.json
+on: 
+  workflow_call:
+    secrets:
+      token:
+        description: token
+        required: true
+
+jobs:
+  dispatch-cert-store-merge:
+    runs-on: windows-latest
+    needs: get-manifest-properties
+    if: needs.get-manifest-properties.outputs.integration_type == 'orchestrator' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Trigger update-stores workflow on kfutil
+        uses: keyfactor/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SDK_SYNC_PAT }}
+          repository: keyfactor/kfutil
+          event-type: targetRepo-event
+          client-payload: '{"targetRepo": "${{github.repository}},"targetRef": "${{github.ref}}"}' # This is the repository you want to update
