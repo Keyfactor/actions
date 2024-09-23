@@ -100,10 +100,10 @@ jobs:
         run: |
            md ${{ github.workspace }}\zip\Keyfactor
            Compress-Archive -Path `
-           ${{ github.workspace }}\IISU\bin\Release\net6.0\ `
+           ${{ github.workspace }}\bin\Release\net6.0\ `
            -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME_net6.0.zip -Force
            Compress-Archive -Path `
-           ${{ github.workspace }}\IISU\bin\Release\net8.0\ `
+           ${{ github.workspace }}\bin\Release\net8.0\ `
            -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME_net8.0.zip -Force
 
       - name: Upload Release Asset (x64) Net6
