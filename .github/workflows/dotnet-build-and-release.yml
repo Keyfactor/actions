@@ -88,47 +88,70 @@ jobs:
           $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
 
-# This needs to be changed to search for a manifest in each of the folders. Skip for testing      
-      # - name: Check for manifest
-      #   if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
-      #   run: |
-      #     $fileExists = Get-ChildItem -Path ${{ github.workspace }}\${{ inputs.release_dir }} -Recurse -Filter 'manifest.json' | Select-Object -First 1
-      #     if (-not $fileExists) { exit 1 }
+
+      - name: Read Target Frameworks
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content "${{ inputs.release_folder }}\project.csproj"
+          $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
+          if ($targetFrameworks -eq $null) {
+            $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
+          }
+          echo "::set-output name=release_platforms::$targetFrameworks"
 
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
+        shell: pwsh
         run: |
-           md ${{ github.workspace }}\zip\Keyfactor
-           Compress-Archive -Verbose -Path `
-           ${{ github.workspace }}\bin\Release\net6.0\ `
-           -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME_net6.0.zip -Force
-           Compress-Archive -Verbose -Path `
-           ${{ github.workspace }}\bin\Release\net8.0\ `
-           -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME_net8.0.zip -Force
+          $platforms = "${{ steps.read_target_frameworks.outputs.release_platforms }}".Split(';')
+          $outputDir = "${{ github.workspace }}\zip\Keyfactor"
+          md $outputDir
+          foreach ($platform in $platforms) {
+            $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
+            $zipPath = "$outputDir\${{ env.REPO_NAME }}_$platform.zip"
+            Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
+          }
 
-      - name: Upload Release Asset (x64) Net6
+      - name: Check for manifest in zip files
+        if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
+        shell: pwsh
+        run: |
+          $zipFiles = Get-ChildItem -Path "${{ github.workspace }}\zip\Keyfactor" -Filter '*.zip'
+          foreach ($zipFile in $zipFiles) {
+            $zipPath = $zipFile.FullName
+            Write-Host "Checking manifest.json in $zipPath"
+      
+            # Extract the list of files in the zip to check for manifest.json
+            $zipContent = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+            $manifestExists = $false
+            foreach ($entry in $zipContent.Entries) {
+              if ($entry.FullName -eq "manifest.json") {
+                $manifestExists = $true
+                break
+              }
+            }
+            $zipContent.Dispose()
+
+            if (-not $manifestExists) {
+              Write-Host "manifest.json not found in $zipPath"
+              exit 1
+            } else {
+              Write-Host "manifest.json found in $zipPath"
+            }
+          }
+
+      - name: Upload Release Assets
         if: success() && env.CREATE_RELEASE == 'True'
-        id: upload-release-asset-x64-net6
         uses: keyfactor/upload-release-assets@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ inputs.release_url }}
-          asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}_net6.0.zip
-          asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}_net6.0.zip
+          asset_path: "${{ github.workspace }}/zip/Keyfactor/*"
+          asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
 
-      - name: Upload Release Asset (x64) Net8
-        if: success() && env.CREATE_RELEASE == 'True'
-        id: upload-release-asset-x64-net8
-        uses: keyfactor/upload-release-assets@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ inputs.release_url }}
-          asset_path: ${{ github.workspace }}\zip\Keyfactor\${{ env.REPO_NAME}}_net8.0.zip
-          asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}_net8.0.zip
-          asset_content_type: application/zip
+
 
       - name: Delete Failed Release
         if: failure() && env.CREATE_RELEASE == 'True'
