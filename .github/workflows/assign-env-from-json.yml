@@ -28,6 +28,7 @@ jobs:
       update_catalog: ${{ steps.read-update_catalog.outputs.output-value }}
       UOFramework: ${{ steps.read-UOFramework.outputs.output-value }}
       description: ${{ steps.read-description.outputs.output-value }}
+      release_project: ${{ steps.read-release_project.outputs.output-value }}
     name: Set workflow variables from integration-manifest.json
     steps:
       - name: checkout-json-file
@@ -59,6 +60,14 @@ jobs:
         with:
           input-file: 'src/integration-manifest.json'
           input-property: 'integration_type'
+
+      - name: Read release_project property 
+        uses: ./tools
+        id: read-release_project
+        with:
+          input-file: 'src/integration-manifest.json'
+          input-property: 'release_project'
+          required-value: 'false'
 
       - name: Read update_catalog property 
         uses: ./tools

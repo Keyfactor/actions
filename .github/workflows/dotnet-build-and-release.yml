@@ -92,7 +92,7 @@ jobs:
       - name: Read Target Frameworks
         shell: pwsh
         run: |
-          [xml]$csproj = Get-Content "${{ inputs.release_folder }}\project.csproj"
+          [xml]$csproj = Get-Content "${{ inputs.release_project }}"
           $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
           if ($targetFrameworks -eq $null) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
