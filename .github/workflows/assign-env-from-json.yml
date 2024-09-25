@@ -14,6 +14,9 @@ on:
       update_catalog:
         description: The release_dir property from integration-manifest.json
         value: ${{ jobs.assign-from-json.outputs.update_catalog }}      
+      release_project:
+        description: The release_project property from integration-manifest.json
+        value: ${{ jobs.assign-from-json.outputs.release_project }}      
       UOFramework:
         description: The UOFramework property from integration-manifest.json
         value: ${{ jobs.assign-from-json.outputs.UOFramework }}      

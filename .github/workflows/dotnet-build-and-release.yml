@@ -15,6 +15,10 @@ on:
         description: The relative directory inside the repo where the build artifacts to publish for release will be located
         required: false 
         type: string
+      release_project:
+        description: The relative file location for csproj
+        required: false 
+        type: string
       integration_type:
         description: The extension integration_type
         required: true
