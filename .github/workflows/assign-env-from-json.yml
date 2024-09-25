@@ -134,5 +134,6 @@ jobs:
             fi
           fi
           echo "* ${{ steps.read-release_dir.outputs.output-property }} &colon; ${{ steps.read-release_dir.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
+          echo "* ${{ steps.read-release_project.outputs.output-property }} &colon; ${{ steps.read-release_project.outputs.output-value }}" >> $GITHUB_STEP_SUMMARY 
 
 
