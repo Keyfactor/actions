@@ -103,7 +103,7 @@ jobs:
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
           }
           echo "release_platforms: $targetFrameworks"
-          echo "{release_platforms}={$targetFrameworks}" >> $GITHUB_OUTPUT
+          echo "release_platforms=$targetFrameworks" >> $GITHUB_OUTPUT
 
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
