@@ -94,6 +94,7 @@ jobs:
 
 
       - name: Read Target Frameworks
+        id: read_target_frameworks  
         shell: pwsh
         run: |
           [xml]$csproj = Get-Content "${{ inputs.release_project }}"
@@ -101,7 +102,8 @@ jobs:
           if ($targetFrameworks -eq $null) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
           }
-          echo "::set-output name=release_platforms::$targetFrameworks"
+          echo "release_platforms: $targetFrameworks"
+          echo "{release_platforms}={$targetFrameworks}" >> $GITHUB_OUTPUT
 
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
