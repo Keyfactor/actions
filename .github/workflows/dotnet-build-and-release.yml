@@ -159,11 +159,11 @@ jobs:
 
 
 
-      - name: Delete Failed Release
-        if: failure() && env.CREATE_RELEASE == 'True'
-        id: delete-failed-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
+      # - name: Delete Failed Release
+      #   if: failure() && env.CREATE_RELEASE == 'True'
+      #   id: delete-failed-release
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh release delete ${{ inputs.release_version }} --yes --cleanup-tag  
 
