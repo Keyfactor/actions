@@ -117,7 +117,7 @@ jobs:
             $zipPath = "$outputDir\${{ env.REPO_NAME }}_$platform.zip"
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
-
+          Get-ChildItem -File -Path $outputDir
       # - name: Check for manifest in zip files
       #   if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
       #   shell: pwsh
@@ -154,7 +154,7 @@ jobs:
         with:
           upload_url: ${{ inputs.release_url }}
           asset_path: "${{ github.workspace }}/zip/Keyfactor/*"
-          asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
+          # asset_name: ${{ env.REPO_NAME}}_${{ inputs.release_version }}.zip
           asset_content_type: application/zip
 
 
