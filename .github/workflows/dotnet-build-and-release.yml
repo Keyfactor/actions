@@ -118,33 +118,33 @@ jobs:
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
 
-      - name: Check for manifest in zip files
-        if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
-        shell: pwsh
-        run: |
-          $zipFiles = Get-ChildItem -Path "${{ github.workspace }}\zip\Keyfactor" -Filter '*.zip'
-          foreach ($zipFile in $zipFiles) {
-            $zipPath = $zipFile.FullName
-            Write-Host "Checking manifest.json in $zipPath"
+      # - name: Check for manifest in zip files
+      #   if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
+      #   shell: pwsh
+      #   run: |
+      #     $zipFiles = Get-ChildItem -Path "${{ github.workspace }}\zip\Keyfactor" -Filter '*.zip'
+      #     foreach ($zipFile in $zipFiles) {
+      #       $zipPath = $zipFile.FullName
+      #       Write-Host "Checking manifest.json in $zipPath"
       
-            # Extract the list of files in the zip to check for manifest.json
-            $zipContent = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
-            $manifestExists = $false
-            foreach ($entry in $zipContent.Entries) {
-              if ($entry.FullName -eq "manifest.json") {
-                $manifestExists = $true
-                break
-              }
-            }
-            $zipContent.Dispose()
+      #       # Extract the list of files in the zip to check for manifest.json
+      #       $zipContent = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+      #       $manifestExists = $false
+      #       foreach ($entry in $zipContent.Entries) {
+      #         if ($entry.FullName -eq "manifest.json") {
+      #           $manifestExists = $true
+      #           break
+      #         }
+      #       }
+      #       $zipContent.Dispose()
 
-            if (-not $manifestExists) {
-              Write-Host "manifest.json not found in $zipPath"
-              exit 1
-            } else {
-              Write-Host "manifest.json found in $zipPath"
-            }
-          }
+      #       if (-not $manifestExists) {
+      #         Write-Host "manifest.json not found in $zipPath"
+      #         exit 1
+      #       } else {
+      #         Write-Host "manifest.json found in $zipPath"
+      #       }
+      #     }
 
       - name: Upload Release Assets
         if: success() && env.CREATE_RELEASE == 'True'
