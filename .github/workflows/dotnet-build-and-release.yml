@@ -155,7 +155,7 @@ jobs:
         with:
           upload_url: ${{ inputs.release_url }}
           asset_path: "${{ env.outputdir }}"
-          asset_name: *.zip
+          asset_name: "*.zip"
           asset_content_type: application/zip
 
 
