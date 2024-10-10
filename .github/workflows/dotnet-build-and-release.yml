@@ -155,7 +155,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ inputs.release_url }}
-          asset_path: "${{ env.outputDir }}\*.zip"
+          asset_path: "${{ env.outputDir }}"
           asset_name: "*.zip"
           asset_content_type: application/zip
 
