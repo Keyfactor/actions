@@ -116,6 +116,7 @@ jobs:
           foreach ($platform in $platforms) {
             $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
             $zipPath = "$outputDir\${{ env.REPO_NAME }}_$platform.zip"
+            Get-ChildItem -File -Path $sourcePath
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
           Get-ChildItem -File -Path $outputDir
@@ -154,7 +155,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ inputs.release_url }}
-          asset_path: "${{ env.outputDir }}/*.zip"
+          asset_path: "${{ env.outputDir }}\*.zip"
           asset_name: "*.zip"
           asset_content_type: application/zip
 
