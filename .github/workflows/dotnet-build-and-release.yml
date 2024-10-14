@@ -156,7 +156,7 @@ jobs:
         with:
           upload_url: ${{ inputs.release_url }}
           asset_path: "${{ env.outputDir }}"
-          asset_name: "*.zip"
+          asset_name: "test-orch-mh_net6.0.zip"
           asset_content_type: application/zip
 
 
