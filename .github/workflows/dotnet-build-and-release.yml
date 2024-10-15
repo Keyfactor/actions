@@ -167,6 +167,7 @@ jobs:
           repository: keyfactor/test-orch-mh
           files: ${{ env.outputDir }}\\test-orch-mh_*.zip
           append_body: true
+          tag_name: ${{ inputs.release_version }}
           token: ${{ secrets.token }}
 
       # - name: Delete Failed Release
