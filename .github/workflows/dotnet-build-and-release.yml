@@ -148,18 +148,26 @@ jobs:
       #       }
       #     }
 
-      - name: Upload Release Assets
+      # - name: Upload Release Assets
+      #   if: success() && env.CREATE_RELEASE == 'True'
+      #   uses: keyfactor/upload-release-assets@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ inputs.release_url }}
+      #     asset_path: "${{ env.outputDir }}\\test-orch-mh_*.zip"
+      #     asset_name: "test-orch-mh_*.zip"
+      #     asset_content_type: application/zip
+
+      - name: Release Asset(s)
+        uses: softprops/action-gh-release@v2
         if: success() && env.CREATE_RELEASE == 'True'
-        uses: keyfactor/upload-release-assets@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ inputs.release_url }}
-          asset_path: "${{ env.outputDir }}\\test-orch-mh_*.zip"
-          asset_name: "test-orch-mh_*.zip"
-          asset_content_type: application/zip
-
-
+          body_path: ${{ env.outputDir }}\\test-orch-mh_*.zip
+          repository: keyfactor/test-orch-mh
+          files: ${{ env.outputDir }}\\test-orch-mh_*.zip
+          append_body: true
+          token: ${{ secrets.token }}
 
       # - name: Delete Failed Release
       #   if: failure() && env.CREATE_RELEASE == 'True'
