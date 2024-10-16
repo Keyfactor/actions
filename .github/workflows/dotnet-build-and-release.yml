@@ -126,10 +126,15 @@ jobs:
       - name: Archive Files
         if: success() && env.CREATE_RELEASE == 'True'
         run: |
-           md ${{ github.workspace }}\zip\Keyfactor
-           Compress-Archive -Path `
-           ${{ github.workspace }}\${{ inputs.release_dir }}\ `
-           -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME.zip -Force
+              $zipPath = "${{ github.workspace }}\zip\Keyfactor"
+              if (Test-Path -Path $zipPath) {
+              Remove-Item -Path $zipPath -Recurse -Force
+              }
+              New-Item -Path $zipPath -ItemType Directory
+              md ${{ github.workspace }}\zip\Keyfactor
+                     Compress-Archive -Path `
+                     ${{ github.workspace }}\${{ inputs.release_dir }}\ `
+                     -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME.zip -Force
 
 # Hardcoded test files with test-orch-mh
       # - name: Upload Release Assets
