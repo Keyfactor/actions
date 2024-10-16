@@ -29,7 +29,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v3
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@dual-platform-without-doctool
 
   call-get-primary-language:
     outputs:
@@ -87,11 +87,12 @@ jobs:
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@ab#67222-3.0-doctool
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@dual-platform-without-doctool
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
+      release_project: ${{ needs.call-assign-from-json-workflow.outputs.release_project }}
       integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }} 
     secrets: 
       token: ${{ secrets.token  }}
@@ -129,11 +130,11 @@ jobs:
     secrets: 
       token: ${{ secrets.token  }}
 
-  call-generate-readme-workflow:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
-    secrets:
-      token: ${{ secrets.token }}
+#  call-generate-readme-workflow:
+#    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+#    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
+#    secrets:
+#      token: ${{ secrets.token }}
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
