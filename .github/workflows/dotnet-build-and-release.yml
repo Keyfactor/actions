@@ -112,7 +112,9 @@ jobs:
           $platforms = "${{ env.release_platforms }}".Split(';')
           $outputDir = "${{ github.workspace }}\zip\Keyfactor"
           echo "outputDir=$outputDir" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-          rd $outputDir
+          if (Test-Path $outputDir) {
+           Remove-Item -Recurse -Force $outputDir
+          }
           md $outputDir
           foreach ($platform in $platforms) {
             $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
