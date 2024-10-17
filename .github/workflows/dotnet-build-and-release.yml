@@ -141,7 +141,9 @@ jobs:
         with:
           body_path: ${{ env.outputDir }}\\test-orch-mh_*.zip
           repository: keyfactor/test-orch-mh
-          files: ${{ env.outputDir }}\\test-orch-mh_*.zip
+          files: |
+              ${{ env.outputDir }}\\test-orch-mh_net6.0.zip
+              ${{ env.outputDir }}\\test-orch-mh_net8.0.zip
           append_body: true
           tag_name: ${{ inputs.release_version }}
           token: ${{ secrets.token }}
