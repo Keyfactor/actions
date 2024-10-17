@@ -139,7 +139,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success() && env.CREATE_RELEASE == 'True'
         with:
-          body_path: ${{ env.outputDir }}\\test-orch-mh_*.zip
+          body_path: ${{ env.outputDir }}
           repository: keyfactor/test-orch-mh
           files: |
               ${{ env.outputDir }}\\test-orch-mh_net6.0.zip
