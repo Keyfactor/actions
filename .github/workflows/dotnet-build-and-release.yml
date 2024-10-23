@@ -126,7 +126,7 @@ jobs:
           $buildFiles = Get-ChildItem -File -Path $outputDir -Name
           $releaseArtifacts
           foreach ($zipFile in $buildFiles) {
-            $releaseArtifacts = $releaseArtifacts + $outputDir + $zipFile + [Environment]::NewLine
+            $releaseArtifacts = $releaseArtifacts + $outputDir + "\" + $zipFile + [Environment]::NewLine
           }
           echo "release_artifacts: $releaseArtifacts"
           echo "Writing in as multiline github env variable"
