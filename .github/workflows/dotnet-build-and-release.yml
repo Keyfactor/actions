@@ -123,6 +123,8 @@ jobs:
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
           Get-ChildItem -File -Path $outputDir
+          $releaseArtifacts = (Get-ChildItem -File -Path $outputDir).fullname
+          echo "release_artifacts=$releaseArtifacts" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Check for manifest
         if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
@@ -141,8 +143,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           files: |
-              ${{ env.outputDir }}\\test-orch-mh_net6.0.zip
-              ${{ env.outputDir }}\\test-orch-mh_net8.0.zip
+              ${{ env.release_artifacts }}
           append_body: true
           tag_name: ${{ inputs.release_version }}
           token: ${{ secrets.token }}
