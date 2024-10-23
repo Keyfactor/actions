@@ -123,7 +123,11 @@ jobs:
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
           Get-ChildItem -File -Path $outputDir
-          $releaseArtifacts = (Get-ChildItem -File -Path $outputDir).fullname
+          $buildFiles = Get-ChildItem -File -Path $outputDir -Name
+          $releaseArtifacts
+          foreach ($zipFile in $buildFiles) {
+            $releaseArtifacts = $releaseArtifacts + $outputDir + $zipFile + [Environment]::NewLine
+          }
           echo "release_artifacts=$releaseArtifacts" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Check for manifest
