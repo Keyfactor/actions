@@ -130,11 +130,9 @@ jobs:
           }
           echo "release_artifacts: $releaseArtifacts"
           echo "Writing in as multiline github env variable"
-          echo "release_artifacts<<EOF" >> $GITHUB_ENV
-          echo "$releaseArtifacts" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-          echo "Debug check of github env: ${GITHUB_ENV}"
+          echo "release_artifacts<<EOF" >> $env:GITHUB_ENV
+          echo "$releaseArtifacts" >> $env:GITHUB_ENV
+          echo "EOF" >> $env:GITHUB_ENV
 
       - name: Check for manifest
         if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
