@@ -98,10 +98,8 @@ jobs:
         shell: pwsh
         run: |
           [xml]$csproj = Get-Content "${{ inputs.release_project }}"
-          $csproj.Project.PropertyGroup
-          $csproj.Project.PropertyGourp.TargetFrameworks
           $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
-          if ($targetFrameworks -eq $null) {
+          if ($null -eq $targetFrameworks) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
           }
           echo "release_platforms: $targetFrameworks"
@@ -135,17 +133,6 @@ jobs:
           echo "release_artifacts<<EOF" >> $env:GITHUB_ENV
           echo "$releaseArtifacts" >> $env:GITHUB_ENV
           echo "EOF" >> $env:GITHUB_ENV
-
-      - name: Check for manifest
-        if: success() && env.CREATE_RELEASE == 'True' && inputs.integration_type == 'orchestrator'
-        run: |
-          [xml]$csproj = Get-Content "${{ inputs.release_project }}"
-          $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
-          if ($targetFrameworks -eq $null) {
-            $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
-          }
-          echo "release_platforms: $targetFrameworks"
-          echo "release_platforms=$targetFrameworks" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Release Asset(s)
         uses: softprops/action-gh-release@v2
