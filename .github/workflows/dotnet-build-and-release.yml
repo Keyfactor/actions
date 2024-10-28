@@ -97,9 +97,9 @@ jobs:
         id: read_target_frameworks  
         shell: pwsh
         run: |
-          ls
           [xml]$csproj = Get-Content "${{ inputs.release_project }}"
-          $csproj
+          $csproj.Project.PropertyGroup
+          $csproj.Project.PropertyGourp.TargetFrameworks
           $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
           if ($targetFrameworks -eq $null) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
