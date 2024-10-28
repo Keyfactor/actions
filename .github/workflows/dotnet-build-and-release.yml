@@ -117,6 +117,7 @@ jobs:
           }
           md $outputDir
           foreach ($platform in $platforms) {
+            $platform = $platform.Trim()
             $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
             $zipPath = "$outputDir\${{ env.REPO_NAME }}_$platform.zip"
             Get-ChildItem -File -Path $sourcePath
