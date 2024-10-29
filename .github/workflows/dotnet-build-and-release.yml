@@ -119,7 +119,7 @@ jobs:
           foreach ($platform in $platforms) {
             $platform = $platform.Trim()
             $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
-            $zipPath = "$outputDir\${{ env.REPO_NAME }}_$platform.zip"
+            $zipPath = "$outputDir\${{ env.REPO_NAME }}_${{ inputs.release_version }}_$platform.zip"
             Get-ChildItem -File -Path $sourcePath
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
           }
