@@ -27,6 +27,13 @@ jobs:
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
+
+      - name: Set up private repo access for go get
+        run: |
+          git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        env:
+          GITHUB_TOKEN: ${{ secrets.V2BUILDTOKEN}}
+
       - uses: keyfactor/setup-go@v5.0.1
         with:
           go-version-file: 'go.mod'
@@ -52,7 +59,7 @@ jobs:
           args: ${{ env.GO_ARGS }}
         env:
           # GitHub sets the GITHUB_TOKEN secret automatically.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.V2BUILDTOKEN}}
           PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GPG_TTY: $(tty)
