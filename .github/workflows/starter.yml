@@ -100,7 +100,7 @@ jobs:
   call-go-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true' 
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@go_build_private_repo_access
     with: 
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets: 
