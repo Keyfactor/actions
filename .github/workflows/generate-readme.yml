@@ -20,6 +20,16 @@ jobs:
           path: doctool
           token: ${{ secrets.token }}
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb scrot python3-tk
+
+      - name: Start virtual display
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
       - name: Launch local doctool 
         uses: ./doctool
         id: launch-doctool
