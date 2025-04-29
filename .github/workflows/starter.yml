@@ -5,11 +5,11 @@ on:
       token:
         description: 'GitHub token'
         required: true
-## This secret 'APPROVE_README_PUSH' is not used. 
-## Remove when the v3 bootstrap has been updated
+      ## This secret 'APPROVE_README_PUSH' is not used.
+      ## Remove when the v3 bootstrap has been updated
       APPROVE_README_PUSH:
         description: 'Token to add-and-commit generated readme'
-        required: true  
+        required: true
       gpg_key:
         description: 'GPG Private Key'
         required: true
@@ -25,6 +25,32 @@ on:
       scan_token:
         description: 'Polaris token'
         required: false
+      entra_username:
+        description: 'Entra username for authentication'
+        required: true
+      entra_password:
+        description: 'Entra password for authentication'
+        required: false
+      command_client_id:
+        description: 'Command client ID for API authentication'
+        required: false
+      command_client_secret:
+        description: 'Command client secret for API authentication'
+        required: false
+    inputs:
+      command_token_url:
+        type: string
+        description: 'URL for obtaining command tokens'
+        required: false
+      command_hostname:
+        type: string
+        description: 'Command hostname for API endpoints'
+        required: false
+      command_base_api_path:
+        type: string
+        description: 'Base API path for the Command API'
+        required: false
+
 
 
 jobs:
@@ -78,74 +104,82 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create an array from platform_list input #  
         id: vars
-        run: 
+        run:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v3
 
   call-dotnet-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
     uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v3
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
-      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }} 
-    secrets: 
+      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }}
+    secrets:
       token: ${{ secrets.token  }}
 
   call-go-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists]
-    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true' 
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists ]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true'
     uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v3
-    with: 
+    with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
-    secrets: 
+    secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
 
   call-container-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms]
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
     uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v3
-    with: 
+    with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
-    secrets: 
+    secrets:
       docker-user: ${{ secrets.docker-user }}
       docker-token: ${{ secrets.docker-token }}
 
   call-maven-build-and-release-workflow:
-    needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Java'
     uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v3
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
       release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
-    secrets: 
+    secrets:
       token: ${{ secrets.token  }}
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@screenshots
+    with:
+      command_token_url: ${{ inputs.command_token_url }}
+      command_hostname: ${{ inputs.command_hostname }}
+      command_base_api_path: ${{ inputs.command_base_api_path }}
     secrets:
       token: ${{ secrets.token }}
+      entra_username: ${{ secrets.ENTRA_USERNAME }}
+      entra_password: ${{ secrets.ENTRA_PASSWORD }}
+      command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
+      command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
     if: needs.call-assign-from-json-workflow.outputs.update_catalog  == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v3
-    secrets: 
+    secrets:
       token: ${{ secrets.token }}
 
   call-repository-configuration-workflow:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v3
-    secrets: 
+    secrets:
       token: ${{ secrets.token }}
 
   call-polaris-scan-workflow:
@@ -157,11 +191,11 @@ jobs:
       token: ${{ secrets.scan_token }}
 
   call-post-release-workflow:
-   needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
-   if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-   uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v3
-   secrets: 
-     token: ${{ secrets.token }}
-   with:
-     branchname: ${{ github.event.pull_request.base.ref }}
-     release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+    needs: [ call-assign-from-json-workflow, call-create-github-release-workflow ]
+    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
+    uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v3
+    secrets:
+      token: ${{ secrets.token }}
+    with:
+      branchname: ${{ github.event.pull_request.base.ref }}
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
