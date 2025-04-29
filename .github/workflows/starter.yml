@@ -25,6 +25,25 @@ on:
       scan_token:
         description: 'Polaris token'
         required: false
+      entra_username:
+        description: 'Entra username for authentication'
+        required: true
+      entra_password:
+        description: 'Entra password for authentication'
+        required: false
+      command_client_id:
+        description: 'Command client ID for API authentication'
+        required: false
+      command_client_secret:
+        description: 'Command client secret for API authentication'
+        required: false
+      command_token_url:
+        description: 'URL for obtaining command tokens'
+        required: false
+      command_hostname:
+        description: 'Command hostname for API endpoints'
+        required: false
+
 
 
 jobs:
@@ -131,9 +150,15 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@3.2.0-rc.9
     secrets:
       token: ${{ secrets.token }}
+      entra_username: ${{ secrets.ENTRA_USERNAME }}
+      entra_password: ${{ secrets.ENTRA_PASSWORD }}
+      command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
+      command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
+      command_token_url: ${{ secrets.COMMAND_TOKEN_URL }}
+      command_hostname: ${{ secrets.COMMAND_HOSTNAME }}
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
