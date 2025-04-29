@@ -25,3 +25,10 @@ jobs:
         id: launch-doctool
         with:
           token: ${{ secrets.token }}
+          entra_username: ${{ secrets.ENTRA_USERNAME }}
+          entra_password: ${{ secrets.ENTRA_PASSWORD }}
+          command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
+          command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
+          command_token_url: ${{ secrets.COMMAND_TOKEN_URL }}
+          command_hostname: ${{ secrets.COMMAND_HOSTNAME }}
+
