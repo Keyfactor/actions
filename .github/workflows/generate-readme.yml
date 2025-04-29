@@ -2,9 +2,34 @@ name: Generate README from templates and data files using doctool
 on:
   workflow_call:
     secrets:
-      token: 
+      token:
         description: 'Secret token from caller workflow to approve readme'
         required: true
+      entra_username:
+        description: 'Entra username for authentication'
+        required: true
+      entra_password:
+        description: 'Entra password for authentication'
+        required: false
+      command_client_id:
+        description: 'Command client ID for API authentication'
+        required: false
+      command_client_secret:
+        description: 'Command client secret for API authentication'
+        required: false
+    inputs:
+      command_token_url:
+        type: string
+        description: 'URL for obtaining command tokens'
+        required: false
+      command_hostname:
+        type: string
+        description: 'Command hostname for API endpoints'
+        required: false
+      command_base_api_path:
+        type: string
+        description: 'Base API path for the Command API'
+        required: false
 permissions:
   contents: write
 
@@ -20,8 +45,17 @@ jobs:
           path: doctool
           token: ${{ secrets.token }}
 
-      - name: Launch local doctool 
+      - name: Launch local doctool
         uses: ./doctool
         id: launch-doctool
         with:
           token: ${{ secrets.token }}
+          entra_username: ${{ secrets.ENTRA_USERNAME }}
+          entra_password: ${{ secrets.ENTRA_PASSWORD }}
+          command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
+          command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
+          command_token_url: ${{ inputs.command_token_url }}
+          command_hostname: ${{ inputs.command_hostname }}
+          command_base_api_path: ${{ inputs.command_base_api_path }}
+
+
