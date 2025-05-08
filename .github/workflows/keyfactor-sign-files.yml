@@ -50,7 +50,7 @@ jobs:
         id: latestReleaseTag  
 
       - name: Download Release Asset
-        uses: keyfactor/release-downloader@v1.4
+        uses: keyfactor/release-downloader@v1.10
         with:
           repository: "${{ github.repository_owner }}/${{ inputs.targetRepo }}"
           token: ${{ secrets.token }}
