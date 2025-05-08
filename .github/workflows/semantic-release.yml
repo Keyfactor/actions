@@ -35,6 +35,6 @@ jobs:
       # Create a new release using the rules in .releaserc.yml
       - name: Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.V2BUILDTOKEN }}
         run: npx semantic-release
         #if: github.ref == 'refs/heads/main'
