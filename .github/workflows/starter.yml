@@ -87,7 +87,7 @@ jobs:
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@3.1.3-rc.0
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@hotfix/dotnet-build-failure-gh-release
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
