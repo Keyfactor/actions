@@ -8,12 +8,12 @@ on:
         type: string
         default: 1.0.0 # for non-released builds
       release_url:
-        description: The url to upload a publsihed release
+        description: The url to upload a published release
         required: false # leave empty for non-release build
         type: string
       release_dir:
         description: The relative directory inside the repo where the build artifacts to publish for release will be located
-        required: false 
+        required: true 
         type: string
       release_project:
         description: The relative file location for csproj
@@ -59,7 +59,7 @@ jobs:
 
             echo "release_dir: ${{ inputs.release_dir }}"
 
-            $creatingRelease = ("${{ inputs.release_url }}".Trim().Length -gt 0) -and ("${{ inputs.release_dir }}".Trim().Length -gt 0)
+            $creatingRelease = ("${{ inputs.release_url }}".Trim().Length -gt 0))
             echo "Flagged to create release: ${creatingRelease}"
             echo "CREATE_RELEASE=${creatingRelease}" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 

@@ -105,7 +105,6 @@ jobs:
           input-property: 'about.orchestrator.keyfactor_platform_version'
 
       - name: Read release_dir property 
-        if: steps.read-type.outputs.output-value == 'orchestrator' || steps.read-type.outputs.output-value == 'ca-gateway' || steps.read-type.outputs.output-value == 'pam' || steps.read-type.outputs.output-value == 'anyca-plugin'  
         uses: ./tools
         id: read-release_dir
         with:
