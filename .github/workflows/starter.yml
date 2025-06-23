@@ -29,7 +29,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v3
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@dev-3.3
 
   call-get-primary-language:
     outputs:
@@ -87,7 +87,7 @@ jobs:
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@dev-3.3
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
