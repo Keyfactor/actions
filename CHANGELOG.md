@@ -1,3 +1,10 @@
+## [3.3.1](https://github.com/Keyfactor/actions/compare/3.3.0...3.3.1) (2025-06-23)
+
+
+### Bug Fixes
+
+* **rename:** set workflow to .yml extension ([6daa700](https://github.com/Keyfactor/actions/commit/6daa700022d5492004ee5cffa23bddd25275fe40))
+
 # [3.3.0](https://github.com/Keyfactor/actions/compare/3.2.0...3.3.0) (2025-06-23)
 
 
