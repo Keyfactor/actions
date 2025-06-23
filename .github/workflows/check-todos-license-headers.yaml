@@ -1,0 +1,35 @@
+name: Check for TODOs and License headers
+
+on: workflow_call
+
+jobs:
+  grep_todo_job:
+    name: Grep TODO and License Headers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for TODO statements
+        run: (find . -iname "*.cs" "*.go" -exec grep -qi "todo" {} \; -print) | tee ./todo_log.txt
+
+      - name: Save todo log
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: todologs  
+          path: ./**/todo_log.txt 
+
+      - name: Check for Apache License headers
+        run: (find . \( -path "./git*" -o -name "README.md" -o -name "AssemblyInfo.cs" \) -prune -o -type f -iname "*.cs" -iname "*.go"-exec grep -L "Apache License" {} \;) | tee ./license_log.txt
+
+      - name: Save license log
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: licenselogs  
+          path: ./**/license_log.txt  
+
+      - name: Fail if no headers
+        run: if [ -s "./license_log.txt" ]; then echo "Some files are missing the license header"; exit 1; fi
