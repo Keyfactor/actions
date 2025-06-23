@@ -20,7 +20,7 @@ on:
 
 jobs:
   call-check-file-action:
-    uses: keyfactor/cpr-release-checks/.github/workflows/check-files.yml@main
+    uses: keyfactor/actions/.github/workflows/check-todos-license-headers.yml@v3
 
   create-github-release-workflow:
     runs-on: ubuntu-latest

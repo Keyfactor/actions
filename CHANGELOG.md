@@ -1,3 +1,8 @@
+# 3.3.0 - tagged v3
+* allow any integration_type to generate a release build
+* update to use v3 tag throughout workflow steps
+* disable polaris scan (not configured correctly)
+
 # [3.2.0](https://github.com/Keyfactor/actions/compare/3.1.2...3.2.0) (2025-05-08)
 
 

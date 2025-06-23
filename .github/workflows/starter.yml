@@ -29,7 +29,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@dual-platform-without-doctool
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v3
 
   call-get-primary-language:
     outputs:
@@ -87,7 +87,7 @@ jobs:
   call-dotnet-build-and-release-workflow:
     needs: [call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@ab#67222-3.0-doctool
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v3
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -149,13 +149,13 @@ jobs:
     secrets: 
       token: ${{ secrets.token }}
 
-  call-polaris-scan-workflow:
-    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
-    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v3
-    with:
-      scan_branch: ${{ github.event.pull_request.head.ref }}
-    secrets:
-      token: ${{ secrets.scan_token }}
+  # call-polaris-scan-workflow:
+  #   if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
+  #   uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v3
+  #   with:
+  #     scan_branch: ${{ github.event.pull_request.head.ref }}
+  #   secrets:
+  #     token: ${{ secrets.scan_token }}
 
   call-post-release-workflow:
    needs: [call-assign-from-json-workflow, call-create-github-release-workflow]
