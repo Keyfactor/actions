@@ -1,0 +1,62 @@
+---
+branches:
+  - name: main
+    prerelease: false
+  - name: '.*'
+    prerelease: true
+
+
+ci: true
+tagFormat: "${version}"
+plugins:
+  - "@semantic-release/commit-analyzer"
+  - "@semantic-release/release-notes-generator"
+  - "@semantic-release/changelog"
+  - "@semantic-release/git"
+  - "@semantic-release/github"
+
+verifyConditions:
+  - "@semantic-release/changelog"
+  - '@semantic-release/git'
+  - "@semantic-release/github"
+analyzeCommits:
+  - path: "@semantic-release/commit-analyzer"
+generateNotes:
+  - path: "@semantic-release/release-notes-generator"
+    writerOpts:
+      groupBy: "type"
+      commitGroupsSort:
+        - "title" # Sort by title
+        - "feat" # Sort "feat" first
+        - "fix" # Then sort "fix"
+        - "chore" # Then sort "chore"
+        - "docs" # Then sort "docs"
+        - "refactor" # Then sort "refactor"
+      commitsSort: "header"
+      linkCompare: true
+      linkReferences: true
+    presetConfig: true
+prepare:
+  - path: "@semantic-release/changelog"
+    ifBranch: main
+  - path: "@semantic-release/git"
+    message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    assets:
+      - "CHANGELOG.md"
+      - "README.md"
+      - "artifacts/*"
+      - "artifacts/**/*"
+
+publish:
+  - path: "@semantic-release/github"
+    assets:
+      - "CHANGELOG.md"
+      - "README.md"
+      - "artifacts/*"
+      - "artifacts/**/*"
+
+success:
+  - "@semantic-release/github"
+
+fail:
+  - "@semantic-release/github"
