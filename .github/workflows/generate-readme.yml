@@ -7,7 +7,7 @@ on:
         required: true
       entra_username:
         description: 'Entra username for authentication'
-        required: true
+        required: false
       entra_password:
         description: 'Entra password for authentication'
         required: false
@@ -45,23 +45,6 @@ jobs:
           path: doctool
           token: ${{ secrets.token }}
 
-      - name: Show Inputs
-        run: |
-          echo "Command Token URL: ${{ inputs.command_token_url }}"
-          echo "Command Hostname: ${{ inputs.command_hostname }}"
-          echo "Command Base API Path: ${{ inputs.command_base_api_path }}"
-          echo "Entra Username: ${{ secrets.entra_username }}"
-          echo "Entra Password: ${{ secrets.entra_password }}"
-          echo "Command Client ID: ${{ secrets.command_client_id }}"
-          echo "Command Client Secret: ${{ secrets.command_client_secret }}"
-
-      - name: Set environment variables
-        run: |
-          echo "DOCTOOL_COMMAND_TOKEN_URL=${{ inputs.command_token_url }}" >> $GITHUB_ENV
-          echo "DOCTOOL_COMMAND_HOSTNAME=${{ inputs.command_hostname }}" >> $GITHUB_ENV
-          echo "DOCTOOL_COMMAND_BASE_API_PATH=${{ inputs.command_base_api_path }}" >> $GITHUB_ENV
-          
-
       - name: Launch local doctool
         uses: ./doctool
         id: launch-doctool
@@ -71,8 +54,8 @@ jobs:
           entra_password: ${{ secrets.entra_password }}
           command_client_id: ${{ secrets.command_client_id }}
           command_client_secret: ${{ secrets.command_client_secret }}
-          command_token_url: ${{ vars.DOCTOOL_COMMAND_TOKEN_URL }}
-          command_hostname: ${{ vars.DOCTOOL_COMMAND_HOSTNAME }}
-          command_base_api_path: ${{ vars.DOCTOOL_COMMAND_BASE_API_PATH }}
+          command_token_url: ${{ inputs.command_token_url }}
+          command_hostname: ${{ inputs.command_hostname }}
+          command_base_api_path: ${{ inputs.command_token_url }}
 
 
