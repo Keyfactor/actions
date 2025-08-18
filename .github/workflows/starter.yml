@@ -5,11 +5,6 @@ on:
       token:
         description: 'GitHub token'
         required: true
-      ## This secret 'APPROVE_README_PUSH' is not used.
-      ## Remove when the v3 bootstrap has been updated
-      APPROVE_README_PUSH:
-        description: 'Token to add-and-commit generated readme'
-        required: true
       gpg_key:
         description: 'GPG Private Key'
         required: true
@@ -50,8 +45,6 @@ on:
         type: string
         description: 'Base API path for the Command API'
         required: false
-
-
 
 jobs:
   call-assign-from-json-workflow:
