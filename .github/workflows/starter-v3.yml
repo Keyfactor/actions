@@ -158,7 +158,7 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@screenshots
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
     with:
       command_token_url: ${{ vars.COMMAND_TOKEN_URL }}
       command_hostname: ${{ vars.COMMAND_HOSTNAME }}
