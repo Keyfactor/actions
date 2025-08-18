@@ -57,5 +57,3 @@ jobs:
           command_token_url: ${{ vars.DOCTOOL_COMMAND_TOKEN_URL }}
           command_hostname: ${{ vars.DOCTOOL_COMMAND_HOSTNAME }}
           command_base_api_path: ${{ vars.DOCTOOL_COMMAND_BASE_API_PATH }}
-
-
