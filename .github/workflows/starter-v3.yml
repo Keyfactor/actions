@@ -134,6 +134,28 @@ jobs:
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
 
+  call-container-build-and-release-workflow:
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms ]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v3
+    with:
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+      platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
+    secrets:
+      docker-user: ${{ secrets.docker-user }}
+      docker-token: ${{ secrets.docker-token }}
+
+  call-maven-build-and-release-workflow:
+    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Java'
+    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v3
+    with:
+      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+      release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
+      release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
+    secrets:
+      token: ${{ secrets.token  }}
+
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     uses: Keyfactor/actions/.github/workflows/generate-readme.yml@screenshots
