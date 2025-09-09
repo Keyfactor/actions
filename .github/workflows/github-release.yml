@@ -20,7 +20,7 @@ on:
 
 jobs:
   call-check-file-action:
-    uses: keyfactor/actions/.github/workflows/check-todos-license-headers.yml@v3
+    uses: keyfactor/actions/.github/workflows/check-todos-license-headers.yml@v4
 
   create-github-release-workflow:
     runs-on: ubuntu-latest

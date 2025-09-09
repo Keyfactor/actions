@@ -55,7 +55,7 @@ on:
 
 jobs:
   call-assign-from-json-workflow:
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v3
+    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v4
 
   call-get-primary-language:
     outputs:
@@ -108,12 +108,12 @@ jobs:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v3
+    uses: Keyfactor/actions/.github/workflows/github-release.yml@v4
 
   call-dotnet-build-and-release-workflow:
     needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
     if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v4
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -126,7 +126,7 @@ jobs:
   call-go-build-and-release-workflow:
     needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true'
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v4
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
     secrets:
@@ -137,7 +137,7 @@ jobs:
   call-container-build-and-release-workflow:
     needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists,setup_platforms ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'false'
-    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/container-build-and-release.yml@v4
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       platform_list: ${{ fromJson(needs.setup_platforms.outputs.platform_matrix) }}
@@ -148,7 +148,7 @@ jobs:
   call-maven-build-and-release-workflow:
     needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Java'
-    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v3
+    uses: keyfactor/actions/.github/workflows/maven-build-and-release.yml@v4
     with:
       release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
       release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
@@ -158,7 +158,7 @@ jobs:
 
   call-generate-readme-workflow:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v3
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v4
     with:
       command_token_url: ${{ vars.COMMAND_TOKEN_URL }}
       command_hostname: ${{ vars.COMMAND_HOSTNAME }}
@@ -173,19 +173,19 @@ jobs:
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
     if: needs.call-assign-from-json-workflow.outputs.update_catalog  == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v3
+    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v4
     secrets:
       token: ${{ secrets.token }}
 
   call-repository-configuration-workflow:
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
-    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v3
+    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v4
     secrets:
       token: ${{ secrets.token }}
 
   call-polaris-scan-workflow:
     if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
-    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v3
+    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v4
     with:
       scan_branch: ${{ github.event.pull_request.head.ref }}
     secrets:
@@ -194,7 +194,7 @@ jobs:
   call-post-release-workflow:
     needs: [ call-assign-from-json-workflow, call-create-github-release-workflow ]
     if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-    uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v3
+    uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v4
     secrets:
       token: ${{ secrets.token }}
     with:
