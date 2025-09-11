@@ -22,7 +22,7 @@ on:
         required: false
       entra_username:
         description: 'Entra username for authentication'
-        required: true
+        required: false
       entra_password:
         description: 'Entra password for authentication'
         required: false
