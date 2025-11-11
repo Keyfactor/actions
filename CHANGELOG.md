@@ -1,3 +1,22 @@
+# [3.4.0](https://github.com/Keyfactor/actions/compare/3.3.1...3.4.0) (2025-11-11)
+
+
+### Bug Fixes
+
+* **polaris:** Allow failure ([ec9f491](https://github.com/Keyfactor/actions/commit/ec9f4914d6f93cd5ee1ac921addbfd01aa4416f0))
+* **polaris:** Comment out `polaris` until integration can be fixed. ([fb01e2b](https://github.com/Keyfactor/actions/commit/fb01e2bed049abb72f974cff1c0eeb344a1ada8a))
+* **starter:** `entra_username` not required ([e8ef978](https://github.com/Keyfactor/actions/commit/e8ef978040b927afe117590e13034ed37c7aa7a4))
+* **starter:** Call out `write` permissions on generate-readme ([578161c](https://github.com/Keyfactor/actions/commit/578161ce9288a0b2047854dd499b96996ee75bb6))
+* **starter:** Remove container and maven workflow refs. ([86dfcf4](https://github.com/Keyfactor/actions/commit/86dfcf41593fbc3562baea46d6590079f328559f))
+* **starter:** Remove unused `APPROVE_README_PUSH` input ([a92ee10](https://github.com/Keyfactor/actions/commit/a92ee10e2cd901ddb6cd32e1b161dbc16d58ed3b))
+* **starter:** Update self refs for generate-readme ([5858ee9](https://github.com/Keyfactor/actions/commit/5858ee9f1653ec153ad3297d21cdc9aa5b4d42e5))
+* **starter:** Update self version references from `v3` to `v4` ([79bd7a4](https://github.com/Keyfactor/actions/commit/79bd7a4ba43e3a8a94552872e51174402c2bd8b2))
+
+
+### Features
+
+* **docs:** add screenshot automation workflow inputs ([1b0642e](https://github.com/Keyfactor/actions/commit/1b0642ecfd727714bd3caf34da5ee47c73f4d5a4))
+
 # [3.4.0](https://github.com/Keyfactor/actions/compare/3.3.1...3.4.0) (2025-09-11)
 
 
