@@ -156,13 +156,13 @@ jobs:
     secrets:
       token: ${{ secrets.token }}
 
-  call-polaris-scan-workflow:
-    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
-    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v4
-    with:
-      scan_branch: ${{ github.event.pull_request.head.ref }}
-    secrets:
-      token: ${{ secrets.scan_token }}
+#  call-polaris-scan-workflow:
+#    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
+#    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v4
+#    with:
+#      scan_branch: ${{ github.event.pull_request.head.ref }}
+#    secrets:
+#      token: ${{ secrets.scan_token }}
 
   call-post-release-workflow:
     needs: [ call-assign-from-json-workflow, call-create-github-release-workflow ]
