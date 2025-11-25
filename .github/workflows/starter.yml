@@ -47,7 +47,18 @@ on:
         required: false
 
 jobs:
+  check-token-workflow:
+    runs-on: ubuntu-latest
+    name: Check for legacy PAT tokens
+    steps:
+      - name: Check
+        run: |
+          if [[ "${{ secrets.token }}" == "${{ secrets.V2BUILDTOKEN }}" ]]; then
+            echo "::warning title='Legacy infrastructure':: AB#78982: You are using the legacy V2BUILDTOKEN secret. Please migrate to per-action tokens and pass the GITHUB_TOKEN secret instead."
+          fi
+
   call-assign-from-json-workflow:
+    needs: check-token-workflow
     uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v4
 
   call-get-primary-language:
@@ -101,6 +112,7 @@ jobs:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
   call-create-github-release-workflow:
+    needs: check-token-workflow
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v4
 
   call-dotnet-build-and-release-workflow:
