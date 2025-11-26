@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Check
         run: |
-          TOKENSHA = $(echo -n "${{ secrets.token }}" | sha512sum | awk '{print $1}')
+          TOKENSHA=$(echo -n "${{ secrets.token }}" | sha512sum | awk '{print $1}')
           if [[ "$TOKENSHA" == "$CHECKSHA" ]]; then
             echo "::warning title='Legacy infrastructure':: AB#78982: You are using the legacy V2BUILDTOKEN secret. Please migrate to per-action tokens and pass the GITHUB_TOKEN secret instead."
           fi
