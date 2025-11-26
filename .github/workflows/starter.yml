@@ -53,9 +53,12 @@ jobs:
     steps:
       - name: Check
         run: |
-          if [[ "${{ secrets.token }}" == "${{ secrets.V2BUILDTOKEN }}" ]]; then
+          TOKENSHA = $(echo -n "${{ secrets.token }}" | sha512sum | awk '{print $1}')
+          if [[ "$TOKENSHA" == "$CHECKSHA" ]]; then
             echo "::warning title='Legacy infrastructure':: AB#78982: You are using the legacy V2BUILDTOKEN secret. Please migrate to per-action tokens and pass the GITHUB_TOKEN secret instead."
           fi
+        env:
+          CHECKSHA: ${{ vars.V2BUILDTOKEN_HASH }}
 
   call-assign-from-json-workflow:
     needs: check-token-workflow
