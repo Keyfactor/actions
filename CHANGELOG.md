@@ -1,3 +1,10 @@
+## [3.4.1](https://github.com/Keyfactor/actions/compare/3.4.0...3.4.1) (2025-12-13)
+
+
+### Bug Fixes
+
+* **config:** Polaris runner configuration updates. ([3d32856](https://github.com/Keyfactor/actions/commit/3d32856d65ad6f24512669dad177b93e50da4cfd))
+
 # [3.4.0](https://github.com/Keyfactor/actions/compare/3.3.1...3.4.0) (2025-11-11)
 
 
