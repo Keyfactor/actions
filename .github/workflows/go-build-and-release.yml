@@ -112,7 +112,7 @@ jobs:
       - name: Build Windows Fyne application
         shell: bash
         run: |
-          go build -ldflags "-X main.Version=${{ steps.version.outputs.VERSION }}" -o dist/
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.VERSION }}" -tags gui -o dist/
 
       - name: Package with Fyne
         run: |
@@ -124,7 +124,7 @@ jobs:
         run: |
           $exeFile = Get-ChildItem -Filter "*.exe" | Select-Object -First 1
           $baseName = $exeFile.BaseName
-          $zipName = "${baseName}_${{ inputs.release_version }}_windows_amd64.zip"
+          $zipName = "${baseName}_gui_${{ inputs.release_version }}_windows_amd64.zip"
           Compress-Archive -Path $exeFile.FullName -DestinationPath $zipName
           echo "WINDOWS_ZIP=$zipName" >> $env:GITHUB_ENV
 
