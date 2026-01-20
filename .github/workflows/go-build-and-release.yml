@@ -124,7 +124,7 @@ jobs:
         run: |
           $exeFile = Get-ChildItem -Filter "*.exe" | Select-Object -First 1
           $baseName = $exeFile.BaseName
-          $zipName = "${baseName}_gui_${{ inputs.release_version }}_windows_amd64.zip"
+          $zipName = "${baseName}-gui_${{ inputs.release_version }}_windows_amd64.zip"
           Compress-Archive -Path $exeFile.FullName -DestinationPath $zipName
           echo "WINDOWS_ZIP=$zipName" >> $env:GITHUB_ENV
 
