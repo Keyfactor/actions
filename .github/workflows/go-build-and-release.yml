@@ -11,7 +11,7 @@ on:
         description: Build Windows artifacts in a separate workflow
         required: false
         type: boolean
-        default: false
+        default: true
 
     secrets:
       token:
