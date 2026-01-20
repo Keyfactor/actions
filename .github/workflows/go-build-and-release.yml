@@ -7,6 +7,11 @@ on:
         description: Condition based on release branch build
         required: false
         type: string
+      separate_windows_build:
+        description: Build Windows artifacts in a separate workflow
+        required: false
+        type: boolean
+        default: false
 
     secrets:
       token:
@@ -57,3 +62,62 @@ jobs:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GPG_TTY: $(tty)
           Version: ${{ env.VERSION }}
+
+  run-windows-fyne-build:
+    needs: run-goreleaser
+    if: inputs.separate_windows_build
+    runs-on: windows-latest
+    steps:
+      - uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: keyfactor/setup-go@v5.0.1
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Install Fyne dependencies
+        run: |
+          choco install mingw --no-progress -y
+          echo "C:\ProgramData\mingw64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Fyne CLI
+        run: go install fyne.io/fyne/v2/cmd/fyne@latest
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ inputs.release_version }}" != "" ]]; then
+            echo "VERSION=${{ inputs.release_version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=0.0.0-snapshot" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Windows Fyne application
+        shell: bash
+        run: |
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.VERSION }}" -o dist/
+
+      - name: Package with Fyne
+        run: |
+          fyne package -os windows -release
+
+      - name: Zip Windows executable
+        if: inputs.release_version != ''
+        shell: pwsh
+        run: |
+          $exeFile = Get-ChildItem -Filter "*.exe" | Select-Object -First 1
+          $baseName = $exeFile.BaseName
+          $zipName = "${baseName}_${{ inputs.release_version }}_windows_amd64.zip"
+          Compress-Archive -Path $exeFile.FullName -DestinationPath $zipName
+          echo "WINDOWS_ZIP=$zipName" >> $env:GITHUB_ENV
+
+      - name: Upload Windows artifacts to release
+        if: inputs.release_version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_version }}
+          files: ${{ env.WINDOWS_ZIP }}
+          token: ${{ secrets.token }}
