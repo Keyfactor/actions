@@ -1,5 +1,10 @@
 name: 'Determine Release Type'
-description: 'Determines the release type based on event context (PR state, branch, etc.)'
+description: 'Determines the release type from PR context and computes the next semantic version'
+author: 'Keyfactor'
+
+branding:
+  icon: 'tag'
+  color: 'purple'
 
 outputs:
   # Release type flags

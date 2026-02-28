@@ -1,5 +1,10 @@
 name: 'Parse Integration Manifest'
-description: 'Parses integration-manifest.json and extracts configuration values'
+description: 'Parses integration-manifest.json and extracts configuration values for build and release workflows'
+author: 'Keyfactor'
+
+branding:
+  icon: 'file-text'
+  color: 'green'
 
 inputs:
   manifest_path:

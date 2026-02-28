@@ -1,5 +1,10 @@
 name: 'Detect Primary Language'
-description: 'Detects the primary programming language of the repository'
+description: 'Detects the primary programming language of the repository using GitHub API with file extension fallback'
+author: 'Keyfactor'
+
+branding:
+  icon: 'code'
+  color: 'blue'
 
 inputs:
   token:

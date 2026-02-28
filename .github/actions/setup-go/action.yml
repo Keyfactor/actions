@@ -1,5 +1,10 @@
 name: 'Setup Go Environment'
-description: 'Sets up Go with module caching and optional tool installation'
+description: 'Sets up Go with module caching, version detection from go.mod, and optional tool installation'
+author: 'Keyfactor'
+
+branding:
+  icon: 'box'
+  color: 'blue'
 
 inputs:
   go-version:

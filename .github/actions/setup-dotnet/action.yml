@@ -1,5 +1,10 @@
 name: 'Setup .NET Environment'
-description: 'Sets up .NET SDK with NuGet authentication and dependency restoration'
+description: 'Sets up .NET SDK with NuGet authentication, package caching, and dependency restoration'
+author: 'Keyfactor'
+
+branding:
+  icon: 'package'
+  color: 'blue'
 
 inputs:
   dotnet-version:

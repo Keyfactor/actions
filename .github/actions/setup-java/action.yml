@@ -1,5 +1,10 @@
 name: 'Setup Java Environment'
-description: 'Sets up Java JDK with Maven caching'
+description: 'Sets up Java JDK with Maven/Gradle caching and optional custom Maven settings'
+author: 'Keyfactor'
+
+branding:
+  icon: 'coffee'
+  color: 'orange'
 
 inputs:
   java-version:
