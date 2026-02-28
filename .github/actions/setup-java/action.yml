@@ -1,0 +1,62 @@
+name: 'Setup Java Environment'
+description: 'Sets up Java JDK with Maven caching'
+
+inputs:
+  java-version:
+    description: 'Java version to install'
+    required: false
+    default: '17'
+  distribution:
+    description: 'Java distribution (temurin, corretto, zulu, etc.)'
+    required: false
+    default: 'temurin'
+  cache:
+    description: 'Build tool to cache (maven, gradle, or empty)'
+    required: false
+    default: 'maven'
+  maven-settings:
+    description: 'Path to custom Maven settings.xml'
+    required: false
+    default: ''
+
+outputs:
+  java-version:
+    description: 'Installed Java version'
+    value: ${{ steps.setup.outputs.version }}
+  distribution:
+    description: 'Java distribution used'
+    value: ${{ steps.setup.outputs.distribution }}
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.setup.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Java JDK
+      id: setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.distribution }}
+        cache: ${{ inputs.cache }}
+
+    - name: Configure Maven settings
+      if: inputs.maven-settings != ''
+      shell: bash
+      run: |
+        mkdir -p ~/.m2
+        cp "${{ inputs.maven-settings }}" ~/.m2/settings.xml
+
+    - name: Verify Maven installation
+      if: inputs.cache == 'maven'
+      shell: bash
+      run: mvn --version
+
+    - name: Display Java info
+      shell: bash
+      run: |
+        echo "### Java Environment" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Java Version:** $(java -version 2>&1 | head -1)" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Distribution:** ${{ inputs.distribution }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Cache Hit:** ${{ steps.setup.outputs.cache-hit || 'N/A' }}" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,227 @@
+name: Create Release
+
+# =============================================================================
+# Creates GitHub releases with proper versioning
+#
+# This workflow handles:
+#   - Determining release type (full release vs pre-release)
+#   - Computing the next semantic version
+#   - Creating the GitHub release with proper tags
+#
+# Inputs: None (uses event context)
+# Outputs: release_version, release_url, release flags
+# =============================================================================
+
+on:
+  workflow_call:
+    outputs:
+      # Version outputs
+      release_version:
+        description: 'The computed release version'
+        value: ${{ jobs.create-release.outputs.release_version }}
+      release_url:
+        description: 'The upload URL for release artifacts'
+        value: ${{ jobs.create-release.outputs.release_url }}
+      base_version:
+        description: 'Base version from release branch (e.g., 1.2)'
+        value: ${{ jobs.determine-version.outputs.base_version }}
+      latest_tag:
+        description: 'Latest existing tag for this release branch'
+        value: ${{ jobs.determine-version.outputs.latest_tag }}
+
+      # Release type flags
+      is_full_release:
+        description: 'True if this is a full release (merged PR)'
+        value: ${{ jobs.determine-version.outputs.is_full_release }}
+      is_pre_release:
+        description: 'True if this is a pre-release (open PR)'
+        value: ${{ jobs.determine-version.outputs.is_pre_release }}
+      is_release_branch:
+        description: 'True if PR targets a release-* branch'
+        value: ${{ jobs.determine-version.outputs.is_release_branch }}
+      is_hotfix:
+        description: 'True if this is a hotfix release'
+        value: ${{ jobs.determine-version.outputs.is_hotfix }}
+
+jobs:
+  determine-version:
+    name: Determine Version
+    runs-on: ubuntu-latest
+    outputs:
+      base_version: ${{ steps.context.outputs.base_version }}
+      latest_tag: ${{ steps.tags.outputs.latest_tag }}
+      next_version: ${{ steps.version.outputs.next_version }}
+      is_full_release: ${{ steps.context.outputs.is_full_release }}
+      is_pre_release: ${{ steps.context.outputs.is_pre_release }}
+      is_release_branch: ${{ steps.context.outputs.is_release_branch }}
+      is_hotfix: ${{ steps.tags.outputs.is_hotfix }}
+      increment_level: ${{ steps.context.outputs.increment_level }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract PR context
+        id: context
+        run: |
+          EVENT="${{ github.event_name }}"
+
+          # Defaults
+          IS_FULL_RELEASE="false"
+          IS_PRE_RELEASE="false"
+          IS_RELEASE_BRANCH="false"
+          INCREMENT_LEVEL=""
+          BASE_VERSION=""
+
+          if [[ "$EVENT" == "pull_request" ]]; then
+            PR_BASE_REF="${{ github.event.pull_request.base.ref }}"
+            PR_STATE="${{ github.event.pull_request.state }}"
+            PR_MERGED="${{ github.event.pull_request.merged }}"
+            MERGE_SHA="${{ github.event.pull_request.merge_commit_sha }}"
+
+            echo "Event: $EVENT" >> "$GITHUB_STEP_SUMMARY"
+            echo "PR State: $PR_STATE" >> "$GITHUB_STEP_SUMMARY"
+            echo "PR Merged: $PR_MERGED" >> "$GITHUB_STEP_SUMMARY"
+            echo "Base Ref: $PR_BASE_REF" >> "$GITHUB_STEP_SUMMARY"
+
+            # Check if targeting release branch
+            if [[ "$PR_BASE_REF" == release-* ]]; then
+              IS_RELEASE_BRANCH="true"
+              BASE_VERSION="${PR_BASE_REF#release-}"
+
+              # Full release: PR merged to release branch
+              if [[ "$PR_STATE" == "closed" && "$PR_MERGED" == "true" && "$MERGE_SHA" == "${{ github.sha }}" ]]; then
+                IS_FULL_RELEASE="true"
+                INCREMENT_LEVEL="patch"
+              # Pre-release: Open PR to release branch
+              elif [[ "$PR_STATE" == "open" ]]; then
+                IS_PRE_RELEASE="true"
+                INCREMENT_LEVEL="prerelease"
+              fi
+            fi
+          fi
+
+          echo "is_full_release=$IS_FULL_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "is_pre_release=$IS_PRE_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "is_release_branch=$IS_RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "increment_level=$INCREMENT_LEVEL" >> "$GITHUB_OUTPUT"
+
+      - name: Find latest tag
+        id: tags
+        if: steps.context.outputs.is_release_branch == 'true'
+        run: |
+          BASE_VERSION="${{ steps.context.outputs.base_version }}"
+
+          git fetch --tags
+
+          LATEST_TAG=""
+          IS_HOTFIX="false"
+
+          if [[ -n "$(git tag)" ]]; then
+            # Find tags matching this release branch
+            BRANCH_TAGS=$(git tag --sort=-v:refname | grep "^$BASE_VERSION" || echo "")
+
+            if [[ -n "$BRANCH_TAGS" ]]; then
+              # Get the latest tag base (without prerelease suffix)
+              TAG_BASE=$(echo "$BRANCH_TAGS" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+
+              # Prefer final release over prerelease
+              FINAL_TAG=$(echo "$BRANCH_TAGS" | grep -E "^${TAG_BASE}$" | head -1 || echo "")
+
+              if [[ -n "$FINAL_TAG" ]]; then
+                LATEST_TAG="$FINAL_TAG"
+              else
+                LATEST_TAG=$(echo "$BRANCH_TAGS" | head -1)
+              fi
+
+              # Determine if hotfix (not latest major.minor)
+              ALL_TAGS_BASE=$(git tag --sort=-v:refname | grep -oE '^[0-9]+\.[0-9]+' | head -1)
+              if [[ "$ALL_TAGS_BASE" != "$BASE_VERSION" ]]; then
+                IS_HOTFIX="true"
+              fi
+            fi
+          fi
+
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "is_hotfix=$IS_HOTFIX" >> "$GITHUB_OUTPUT"
+          echo "Latest tag: $LATEST_TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compute next version
+        id: version
+        if: steps.context.outputs.is_release_branch == 'true'
+        run: |
+          LATEST_TAG="${{ steps.tags.outputs.latest_tag }}"
+          BASE_VERSION="${{ steps.context.outputs.base_version }}"
+          INCREMENT="${{ steps.context.outputs.increment_level }}"
+
+          if [[ -z "$LATEST_TAG" ]]; then
+            # Initial release for this branch
+            if [[ "$INCREMENT" == "prerelease" ]]; then
+              NEXT_VERSION="${BASE_VERSION}.0-rc.0"
+            else
+              NEXT_VERSION="${BASE_VERSION}.0"
+            fi
+          else
+            if [[ "$INCREMENT" == "prerelease" ]]; then
+              if [[ "$LATEST_TAG" == *"-rc."* ]]; then
+                # Increment RC number
+                RC_NUM=$(echo "$LATEST_TAG" | grep -oP '(?<=-rc\.)\d+')
+                NEW_RC=$((RC_NUM + 1))
+                NEXT_VERSION=$(echo "$LATEST_TAG" | sed "s/-rc\.[0-9]*/-rc.$NEW_RC/")
+              else
+                # New prerelease from final version
+                NEXT_VERSION="${LATEST_TAG}-rc.0"
+              fi
+            else
+              # Patch increment - strip any prerelease suffix first
+              BASE=$(echo "$LATEST_TAG" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
+              if [[ -z "$BASE" ]]; then
+                BASE="${BASE_VERSION}.0"
+              fi
+              PATCH=$(echo "$BASE" | cut -d. -f3)
+              NEW_PATCH=$((PATCH + 1))
+              NEXT_VERSION=$(echo "$BASE" | sed "s/\.[0-9]*$/.$NEW_PATCH/")
+            fi
+          fi
+
+          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "**Next version: $NEXT_VERSION**" >> "$GITHUB_STEP_SUMMARY"
+
+  create-release:
+    name: Create GitHub Release
+    needs: determine-version
+    if: needs.determine-version.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.create.outputs.current_tag }}
+      release_url: ${{ steps.create.outputs.upload_url }}
+    steps:
+      - name: Display version info
+        run: |
+          echo "Creating release: ${{ needs.determine-version.outputs.next_version }}"
+          echo "Pre-release: ${{ needs.determine-version.outputs.is_pre_release }}"
+
+      - name: Create release
+        id: create
+        uses: keyfactor/action-create-release@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANUAL_VERSION: ${{ needs.determine-version.outputs.next_version }}
+        with:
+          release_name: ${{ needs.determine-version.outputs.next_version }}
+          body: |
+            ## Release ${{ needs.determine-version.outputs.next_version }}
+
+            - [Changelog](./CHANGELOG.md)
+            - [README](./README.md)
+
+            For the latest documentation, visit the [main branch](../main).
+          draft: false
+          prerelease: ${{ needs.determine-version.outputs.is_pre_release == 'true' }}
+          prerelease_suffix: rc
+          tag_name: ${{ needs.determine-version.outputs.next_version }}
+          auto_increment_type: ${{ needs.determine-version.outputs.is_pre_release == 'true' && 'prerelease' || 'patch' }}
+          tag_schema: semantic
+          commitish: ${{ github.sha }}

@@ -1,21 +1,23 @@
-name: Bootstrap Starter Workflow
+name: Keyfactor Integration CI/CD
 
 # =============================================================================
-# Keyfactor Integration CI/CD Bootstrap Workflow (v6)
+# Keyfactor Integration Bootstrap Workflow (v6)
 #
-# This workflow orchestrates the full CI/CD pipeline for Keyfactor integrations.
-# It handles:
-#   - Language detection and manifest parsing
-#   - PR quality checks and signoff summaries
-#   - Build dispatching to language-specific workflows
-#   - Release management (versions, tags, SBOM)
-#   - Post-release tasks (docs, catalog updates)
+# This workflow orchestrates the complete CI/CD pipeline for Keyfactor
+# integrations. It is designed to be called from downstream repositories.
 #
-# Event Triggers:
-#   - pull_request → Quality checks, pre-release builds
-#   - push (main)  → README generation, catalog updates
-#   - create (release-*) → Repository configuration
-#   - workflow_dispatch → Manual triggers
+# Architecture:
+#   Phase 1: Context Detection (language, manifest, config files)
+#   Phase 2: Quality Gates (PR checks, signoff summary)
+#   Phase 3: Release Management (versioning, GitHub releases)
+#   Phase 4: Build (language-specific build workflows)
+#   Phase 5: Post-Release (SBOM, docs, catalog)
+#   Phase 6: Repository Config (branch protection, teams)
+#
+# Event Handling:
+#   - pull_request  → Quality checks + builds + pre-releases
+#   - push (main)   → README generation, catalog updates
+#   - create        → Repository configuration for release branches
 # =============================================================================
 
 on:
@@ -25,10 +27,10 @@ on:
         description: 'GitHub token for API access'
         required: true
       gpg_key:
-        description: 'GPG Private Key for signing'
+        description: 'GPG private key for signing'
         required: true
       gpg_pass:
-        description: 'GPG Passphrase'
+        description: 'GPG passphrase'
         required: true
       docker-user:
         description: 'DockerHub username'
@@ -54,7 +56,7 @@ on:
     inputs:
       command_token_url:
         type: string
-        description: 'URL for Command token endpoint'
+        description: 'Command token endpoint URL'
         required: false
       command_hostname:
         type: string
@@ -68,40 +70,38 @@ on:
 jobs:
   # ===========================================================================
   # PHASE 1: Context Detection
-  # Runs first to gather information about the repository
   # ===========================================================================
 
   detect-context:
-    name: Detect Repository Context
+    name: Detect Context
     runs-on: ubuntu-latest
     outputs:
+      # Language detection
       primary_language: ${{ steps.language.outputs.primary_language }}
       is_csharp: ${{ steps.language.outputs.is_csharp }}
       is_go: ${{ steps.language.outputs.is_go }}
       is_java: ${{ steps.language.outputs.is_java }}
+      # Manifest values
       release_dir: ${{ steps.manifest.outputs.release_dir }}
       release_project: ${{ steps.manifest.outputs.release_project }}
       integration_type: ${{ steps.manifest.outputs.integration_type }}
       update_catalog: ${{ steps.manifest.outputs.update_catalog }}
       platform_matrix: ${{ steps.manifest.outputs.platform_matrix }}
+      # File checks
       goreleaser_exists: ${{ steps.goreleaser.outputs.exists }}
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: keyfactor/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Detect primary language
+      - name: Detect language
         id: language
         uses: Keyfactor/actions/.github/actions/detect-language@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Parse integration manifest
+      - name: Parse manifest
         id: manifest
         uses: Keyfactor/actions/.github/actions/parse-manifest@v6
 
-      - name: Check for GoReleaser config
+      - name: Check GoReleaser
         id: goreleaser
         uses: Keyfactor/actions/.github/actions/check-file-exists@v6
         with:
@@ -109,66 +109,75 @@ jobs:
 
   # ===========================================================================
   # PHASE 2: Quality Gates (PR only)
-  # Runs quality checks and generates signoff summary
   # ===========================================================================
 
-  quality-gates:
-    name: PR Quality Gates
+  quality-checks:
+    name: Quality Checks
     needs: detect-context
     if: github.event_name == 'pull_request'
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v6
+    uses: Keyfactor/actions/.github/workflows/pr-quality-checks.yml@v6
     with:
       primary_language: ${{ needs.detect-context.outputs.primary_language }}
 
   signoff-summary:
-    name: Generate Signoff Summary
-    needs: [detect-context, quality-gates]
-    if: github.event_name == 'pull_request' && startsWith(github.event.pull_request.base.ref, 'release-')
+    name: Signoff Summary
+    needs: [detect-context, quality-checks]
+    if: |
+      github.event_name == 'pull_request' &&
+      startsWith(github.event.pull_request.base.ref, 'release-')
     uses: Keyfactor/actions/.github/workflows/signoff-summary.yml@v6
     with:
-      secrets_scan_passed: ${{ needs.quality-gates.outputs.secrets_scan_passed }}
-      secrets_scan_findings: ${{ needs.quality-gates.outputs.secrets_scan_findings }}
-      changelog_passed: ${{ needs.quality-gates.outputs.changelog_passed }}
-      changelog_findings: ${{ needs.quality-gates.outputs.changelog_findings }}
-      pii_check_passed: ${{ needs.quality-gates.outputs.pii_check_passed }}
-      pii_check_findings: ${{ needs.quality-gates.outputs.pii_check_findings }}
-      manifest_passed: ${{ needs.quality-gates.outputs.manifest_passed }}
-      manifest_findings: ${{ needs.quality-gates.outputs.manifest_findings }}
-      code_quality_passed: ${{ needs.quality-gates.outputs.code_quality_passed }}
-      code_quality_findings: ${{ needs.quality-gates.outputs.code_quality_findings }}
-      all_checks_passed: ${{ needs.quality-gates.outputs.quality_checks_passed }}
-      pr_title_passed: ${{ needs.quality-gates.outputs.pr_title_passed }}
-      pr_title_findings: ${{ needs.quality-gates.outputs.pr_title_findings }}
-      pr_size_passed: ${{ needs.quality-gates.outputs.pr_size_passed }}
-      pr_size_findings: ${{ needs.quality-gates.outputs.pr_size_findings }}
-      dependency_review_passed: ${{ needs.quality-gates.outputs.dependency_review_passed }}
-      dependency_review_findings: ${{ needs.quality-gates.outputs.dependency_review_findings }}
-      breaking_change_detected: ${{ needs.quality-gates.outputs.breaking_change_detected }}
-      breaking_change_findings: ${{ needs.quality-gates.outputs.breaking_change_findings }}
-      prohibited_keywords_passed: ${{ needs.quality-gates.outputs.prohibited_keywords_passed }}
-      prohibited_keywords_findings: ${{ needs.quality-gates.outputs.prohibited_keywords_findings }}
-      vulnerability_scan_passed: ${{ needs.quality-gates.outputs.vulnerability_scan_passed }}
-      vulnerability_scan_findings: ${{ needs.quality-gates.outputs.vulnerability_scan_findings }}
-      formatting_passed: ${{ needs.quality-gates.outputs.formatting_passed }}
-      formatting_findings: ${{ needs.quality-gates.outputs.formatting_findings }}
-      license_compliance_passed: ${{ needs.quality-gates.outputs.license_compliance_passed }}
-      license_compliance_findings: ${{ needs.quality-gates.outputs.license_compliance_findings }}
+      secrets_scan_passed: ${{ needs.quality-checks.outputs.secrets_scan_passed }}
+      secrets_scan_findings: ${{ needs.quality-checks.outputs.secrets_scan_findings }}
+      changelog_passed: ${{ needs.quality-checks.outputs.changelog_passed }}
+      changelog_findings: ${{ needs.quality-checks.outputs.changelog_findings }}
+      pii_check_passed: ${{ needs.quality-checks.outputs.pii_check_passed }}
+      pii_check_findings: ${{ needs.quality-checks.outputs.pii_check_findings }}
+      manifest_passed: ${{ needs.quality-checks.outputs.manifest_passed }}
+      manifest_findings: ${{ needs.quality-checks.outputs.manifest_findings }}
+      code_quality_passed: ${{ needs.quality-checks.outputs.code_quality_passed }}
+      code_quality_findings: ${{ needs.quality-checks.outputs.code_quality_findings }}
+      all_checks_passed: ${{ needs.quality-checks.outputs.all_checks_passed }}
+      pr_title_passed: ${{ needs.quality-checks.outputs.pr_title_passed }}
+      pr_title_findings: ${{ needs.quality-checks.outputs.pr_title_findings }}
+      pr_size_passed: ${{ needs.quality-checks.outputs.pr_size_passed }}
+      pr_size_findings: ${{ needs.quality-checks.outputs.pr_size_findings }}
+      dependency_review_passed: ${{ needs.quality-checks.outputs.dependency_review_passed }}
+      dependency_review_findings: ${{ needs.quality-checks.outputs.dependency_review_findings }}
+      breaking_change_detected: ${{ needs.quality-checks.outputs.breaking_change_detected }}
+      breaking_change_findings: ${{ needs.quality-checks.outputs.breaking_change_findings }}
+      prohibited_keywords_passed: ${{ needs.quality-checks.outputs.prohibited_keywords_passed }}
+      prohibited_keywords_findings: ${{ needs.quality-checks.outputs.prohibited_keywords_findings }}
+      vulnerability_scan_passed: ${{ needs.quality-checks.outputs.vulnerability_scan_passed }}
+      vulnerability_scan_findings: ${{ needs.quality-checks.outputs.vulnerability_scan_findings }}
+      formatting_passed: ${{ needs.quality-checks.outputs.formatting_passed }}
+      formatting_findings: ${{ needs.quality-checks.outputs.formatting_findings }}
+      license_compliance_passed: ${{ needs.quality-checks.outputs.license_compliance_passed }}
+      license_compliance_findings: ${{ needs.quality-checks.outputs.license_compliance_findings }}
 
   # ===========================================================================
-  # PHASE 3: Build & Release (PR to release branch)
-  # Dispatches to language-specific build workflows
+  # PHASE 3: Release Management (PR to release branch)
+  # ===========================================================================
+
+  create-release:
+    name: Create Release
+    if: github.event_name == 'pull_request'
+    uses: Keyfactor/actions/.github/workflows/create-release.yml@v6
+
+  # ===========================================================================
+  # PHASE 4: Build (language-specific)
   # ===========================================================================
 
   build-dotnet:
     name: Build (.NET)
-    needs: [detect-context, quality-gates]
+    needs: [detect-context, create-release]
     if: |
       needs.detect-context.outputs.is_csharp == 'true' &&
-      github.event_name == 'pull_request'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v6
+      needs.create-release.outputs.is_release_branch == 'true'
+    uses: Keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v6
     with:
-      release_version: ${{ needs.quality-gates.outputs.release_version }}
-      release_url: ${{ needs.quality-gates.outputs.release_url }}
+      release_version: ${{ needs.create-release.outputs.release_version }}
+      release_url: ${{ needs.create-release.outputs.release_url }}
       release_dir: ${{ needs.detect-context.outputs.release_dir }}
       release_project: ${{ needs.detect-context.outputs.release_project }}
       integration_type: ${{ needs.detect-context.outputs.integration_type }}
@@ -177,49 +186,47 @@ jobs:
 
   build-go:
     name: Build (Go)
-    needs: [detect-context, quality-gates]
+    needs: [detect-context, create-release]
     if: |
       needs.detect-context.outputs.is_go == 'true' &&
       needs.detect-context.outputs.goreleaser_exists == 'true' &&
-      github.event_name == 'pull_request'
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v6
+      needs.create-release.outputs.is_release_branch == 'true'
+    uses: Keyfactor/actions/.github/workflows/go-build-and-release.yml@v6
     with:
-      release_version: ${{ needs.quality-gates.outputs.release_version }}
+      release_version: ${{ needs.create-release.outputs.release_version }}
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
       gpg_key: ${{ secrets.gpg_key }}
       gpg_pass: ${{ secrets.gpg_pass }}
 
   # ===========================================================================
-  # PHASE 4: Post-Release Tasks
-  # Runs after a PR is merged to a release branch
+  # PHASE 5: Post-Release Tasks
   # ===========================================================================
 
   post-release:
-    name: Post-Release Tasks
-    needs: [detect-context, quality-gates]
-    if: needs.quality-gates.outputs.IS_FULL_RELEASE == 'True'
+    name: Post-Release
+    needs: [detect-context, create-release]
+    if: needs.create-release.outputs.is_full_release == 'true'
     uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v6
     secrets:
       token: ${{ secrets.token }}
     with:
       branchname: ${{ github.event.pull_request.base.ref }}
-      release_version: ${{ needs.quality-gates.outputs.release_version }}
+      release_version: ${{ needs.create-release.outputs.release_version }}
 
   generate-sbom:
     name: Generate SBOM
-    needs: [detect-context, quality-gates]
-    if: needs.quality-gates.outputs.IS_FULL_RELEASE == 'True'
+    needs: [detect-context, create-release]
+    if: needs.create-release.outputs.is_full_release == 'true'
     uses: Keyfactor/actions/.github/workflows/sbom-generation.yml@v6
     with:
       primary_language: ${{ needs.detect-context.outputs.primary_language }}
-      release_version: ${{ needs.quality-gates.outputs.release_version }}
+      release_version: ${{ needs.create-release.outputs.release_version }}
     secrets:
       token: ${{ secrets.token }}
 
   # ===========================================================================
-  # PHASE 5: Documentation & Catalog (push to main)
-  # Runs on pushes to main branch
+  # PHASE 5b: Documentation & Catalog (push to main)
   # ===========================================================================
 
   generate-readme:
@@ -240,7 +247,7 @@ jobs:
       command_client_secret: ${{ secrets.command_client_secret }}
 
   update-catalog:
-    name: Update Integration Catalog
+    name: Update Catalog
     needs: detect-context
     if: |
       needs.detect-context.outputs.update_catalog == 'true' &&
@@ -252,28 +259,11 @@ jobs:
 
   # ===========================================================================
   # PHASE 6: Repository Configuration (release branch creation)
-  # Runs when a new release-* branch is created
   # ===========================================================================
 
-  configure-repository:
+  configure-repo:
     name: Configure Repository
     if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v6
     secrets:
       token: ${{ secrets.token }}
-
-  # ===========================================================================
-  # DISABLED: Polaris Security Scanning
-  # Uncomment when Polaris configuration is complete
-  # ===========================================================================
-
-  # polaris-scan:
-  #   name: Polaris Security Scan
-  #   if: |
-  #     github.event_name == 'pull_request' &&
-  #     (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
-  #   uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v6
-  #   with:
-  #     scan_branch: ${{ github.event.pull_request.head.ref }}
-  #   secrets:
-  #     token: ${{ secrets.scan_token }}

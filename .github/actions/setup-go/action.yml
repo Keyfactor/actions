@@ -1,0 +1,60 @@
+name: 'Setup Go Environment'
+description: 'Sets up Go with module caching and optional tool installation'
+
+inputs:
+  go-version:
+    description: 'Go version to install (or "file" to read from go.mod)'
+    required: false
+    default: 'file'
+  go-version-file:
+    description: 'Path to go.mod for version detection'
+    required: false
+    default: 'go.mod'
+  cache:
+    description: 'Whether to cache Go modules'
+    required: false
+    default: 'true'
+  install-tools:
+    description: 'Space-separated list of Go tools to install'
+    required: false
+    default: ''
+
+outputs:
+  go-version:
+    description: 'Installed Go version'
+    value: ${{ steps.setup.outputs.go-version }}
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.setup.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      id: setup
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version != 'file' && inputs.go-version || '' }}
+        go-version-file: ${{ inputs.go-version == 'file' && inputs.go-version-file || '' }}
+        cache: ${{ inputs.cache == 'true' }}
+
+    - name: Download modules
+      shell: bash
+      run: go mod download
+
+    - name: Install additional tools
+      if: inputs.install-tools != ''
+      shell: bash
+      run: |
+        for tool in ${{ inputs.install-tools }}; do
+          echo "Installing $tool..."
+          go install "$tool" || echo "Warning: Failed to install $tool"
+        done
+
+    - name: Display Go info
+      shell: bash
+      run: |
+        echo "### Go Environment" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Go Version:** $(go version | cut -d' ' -f3)" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Cache Hit:** ${{ steps.setup.outputs.cache-hit || 'N/A' }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **GOPATH:** $GOPATH" >> "$GITHUB_STEP_SUMMARY"
