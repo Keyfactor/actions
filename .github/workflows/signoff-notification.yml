@@ -46,34 +46,32 @@ on:
     secrets:
       token:
         description: 'GitHub token for API access'
-        required: true
+        required: false
       smtp_server:
         description: 'SMTP server hostname'
-        required: true
+        required: false
       smtp_port:
         description: 'SMTP server port'
         required: false
       smtp_username:
         description: 'SMTP username'
-        required: true
+        required: false
       smtp_password:
         description: 'SMTP password'
-        required: true
+        required: false
       email_from:
         description: 'From email address'
-        required: true
+        required: false
       azure_devops_token:
         description: 'Azure DevOps PAT for API access'
         required: false
-
-  pull_request:
-    types: [labeled]
 
 jobs:
   send-notification:
     name: Send Signoff Notification
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'ready for signoff'
+    if: |
+      (github.event_name == 'workflow_call' || github.event.label.name == 'ready for signoff')
     steps:
       - name: Extract PR information
         id: pr-info
@@ -337,7 +335,7 @@ jobs:
           echo "Email body generated"
 
       - name: Send email notification
-        if: steps.recipients.outputs.has_recipients == 'true'
+        if: steps.recipients.outputs.has_recipients == 'true' && secrets.smtp_server != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.smtp_server }}
