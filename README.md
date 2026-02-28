@@ -34,7 +34,7 @@ Reusable GitHub Actions workflows and composite actions for Keyfactor integratio
 
 | Check | Blocking | Description |
 |-------|----------|-------------|
-| Secrets Scan | Yes | Gitleaks secret detection |
+| Secrets Scan | Yes | TruffleHog secret detection |
 | Dependency Review | Yes | CVE and license scanning via GitHub |
 | Vulnerability Scan | Yes | Language-specific (`govulncheck`, `dotnet list --vulnerable`) |
 | License Compliance | Yes | GPL/AGPL detection |
@@ -460,15 +460,33 @@ Labels applied:
 - `bug-fix` - Branch `fix/*`, `bugfix/*`, `hotfix/*`
 - `feature` - Branch `feature/*`, `feat/*`
 
-### Signoff Email Recipients
+### Signoff Email Notifications
 
-Set the `SIGNOFF_RECIPIENTS` repository variable:
+Configure email notifications when PRs are labeled "ready for signoff":
 
+```yaml
+# In your keyfactor-starter-workflow.yml
+jobs:
+  call-starter-workflow:
+    uses: Keyfactor/actions/.github/workflows/starter.yml@v6
+    with:
+      signoff_recipients: 'lead@example.com,team@example.com'
+    secrets:
+      token: ${{ secrets.V2BUILDTOKEN }}
+      smtp_server: ${{ secrets.SMTP_SERVER }}
+      smtp_username: ${{ secrets.SMTP_USERNAME }}
+      smtp_password: ${{ secrets.SMTP_PASSWORD }}
+      email_from: ${{ secrets.EMAIL_FROM }}
+      azure_devops_token: ${{ secrets.AZURE_DEVOPS_TOKEN }}  # Optional
 ```
-Settings > Secrets and variables > Variables > New repository variable
-Name: SIGNOFF_RECIPIENTS
-Value: lead@example.com,team@example.com
-```
+
+**Required secrets for signoff notifications:**
+- `SMTP_SERVER` - SMTP server hostname
+- `SMTP_USERNAME` - SMTP username
+- `SMTP_PASSWORD` - SMTP password
+- `EMAIL_FROM` - From email address
+- `SMTP_PORT` (optional) - Defaults to 587
+- `AZURE_DEVOPS_TOKEN` (optional) - For DevOps work item tagging
 
 ### Custom PII Patterns
 
@@ -479,14 +497,9 @@ customer-specific-pattern
 internal-domain\.com
 ```
 
-### Custom Gitleaks Config
+### TruffleHog Configuration
 
-Create `.gitleaks.toml`:
-
-```toml
-[allowlist]
-paths = ['test/fixtures/.*']
-```
+TruffleHog is used for secrets scanning with the `--only-verified` flag, which reduces false positives by only reporting secrets that can be verified against their respective APIs.
 
 ---
 
@@ -544,6 +557,12 @@ paths = ['test/fixtures/.*']
 | `DOCTOOL_ENTRA_PASSWD` | README screenshots | Entra password |
 | `COMMAND_CLIENT_ID` | README screenshots | Command API client ID |
 | `COMMAND_CLIENT_SECRET` | README screenshots | Command API client secret |
+| `SMTP_SERVER` | Signoff notifications | SMTP server hostname |
+| `SMTP_PORT` | Signoff notifications | SMTP server port (optional, default 587) |
+| `SMTP_USERNAME` | Signoff notifications | SMTP username |
+| `SMTP_PASSWORD` | Signoff notifications | SMTP password |
+| `EMAIL_FROM` | Signoff notifications | From email address |
+| `AZURE_DEVOPS_TOKEN` | Signoff notifications | Azure DevOps PAT (optional) |
 | `SMTP_SERVER` | Signoff emails | SMTP server hostname |
 | `SMTP_USERNAME` | Signoff emails | SMTP username |
 | `SMTP_PASSWORD` | Signoff emails | SMTP password |
@@ -572,7 +591,7 @@ v6 uses upstream actions instead of Keyfactor forks for better maintenance:
 | GPG | `crazy-max/ghaction-import-gpg@v6` |
 | Releases | `softprops/action-gh-release@v2` |
 | Linting | `golangci/golangci-lint-action@v6` |
-| Secrets | `gitleaks/gitleaks-action@v2` |
+| Secrets | `trufflesecurity/trufflehog@main` |
 
 ---
 

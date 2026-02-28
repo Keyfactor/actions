@@ -53,6 +53,24 @@ on:
       command_client_secret:
         description: 'Command API client secret'
         required: false
+      smtp_server:
+        description: 'SMTP server hostname for signoff notifications'
+        required: false
+      smtp_port:
+        description: 'SMTP server port'
+        required: false
+      smtp_username:
+        description: 'SMTP username'
+        required: false
+      smtp_password:
+        description: 'SMTP password'
+        required: false
+      email_from:
+        description: 'From email address for notifications'
+        required: false
+      azure_devops_token:
+        description: 'Azure DevOps PAT for work item tagging'
+        required: false
     inputs:
       command_token_url:
         type: string
@@ -66,6 +84,11 @@ on:
         type: string
         description: 'Command API base path'
         required: false
+      signoff_recipients:
+        type: string
+        description: 'Comma-separated list of email addresses for signoff notifications'
+        required: false
+        default: ''
 
 jobs:
   # ===========================================================================
@@ -118,6 +141,8 @@ jobs:
     uses: Keyfactor/actions/.github/workflows/pr-quality-checks.yml@v6
     with:
       primary_language: ${{ needs.detect-context.outputs.primary_language }}
+    secrets:
+      token: ${{ secrets.token }}
 
   signoff-summary:
     name: Signoff Summary
@@ -154,6 +179,25 @@ jobs:
       formatting_findings: ${{ needs.quality-checks.outputs.formatting_findings }}
       license_compliance_passed: ${{ needs.quality-checks.outputs.license_compliance_passed }}
       license_compliance_findings: ${{ needs.quality-checks.outputs.license_compliance_findings }}
+
+  signoff-notification:
+    name: Signoff Notification
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'ready for signoff' &&
+      inputs.signoff_recipients != ''
+    uses: Keyfactor/actions/.github/workflows/signoff-notification.yml@v6
+    with:
+      recipients: ${{ inputs.signoff_recipients }}
+    secrets:
+      token: ${{ secrets.token }}
+      smtp_server: ${{ secrets.smtp_server }}
+      smtp_port: ${{ secrets.smtp_port }}
+      smtp_username: ${{ secrets.smtp_username }}
+      smtp_password: ${{ secrets.smtp_password }}
+      email_from: ${{ secrets.email_from }}
+      azure_devops_token: ${{ secrets.azure_devops_token }}
 
   # ===========================================================================
   # PHASE 3: Release Management (PR to release branch)

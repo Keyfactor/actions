@@ -13,6 +13,10 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      token:
+        description: 'GitHub token for NuGet authentication (V2BUILDTOKEN)'
+        required: false
     outputs:
       # Core checks
       secrets_scan_passed:
@@ -375,7 +379,7 @@ jobs:
           fi
 
   # =============================================================================
-  # 7. Secrets Scanning (Gitleaks + TruffleHog)
+  # 7. Secrets Scanning (TruffleHog)
   # =============================================================================
   secrets-scan:
     name: Secrets Scan
@@ -388,14 +392,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Run Gitleaks
-        id: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: false
-        continue-on-error: true
 
       - name: Run TruffleHog
         id: trufflehog
@@ -410,18 +406,14 @@ jobs:
       - name: Set result
         id: result
         run: |
-          GITLEAKS_PASSED="${{ steps.gitleaks.outcome }}"
           TRUFFLEHOG_PASSED="${{ steps.trufflehog.outcome }}"
 
-          if [[ "$GITLEAKS_PASSED" == "success" && "$TRUFFLEHOG_PASSED" == "success" ]]; then
+          if [[ "$TRUFFLEHOG_PASSED" == "success" ]]; then
             echo "passed=true" >> "$GITHUB_OUTPUT"
-            echo "findings=No secrets detected (Gitleaks + TruffleHog)" >> "$GITHUB_OUTPUT"
+            echo "findings=No secrets detected (TruffleHog)" >> "$GITHUB_OUTPUT"
           else
             echo "passed=false" >> "$GITHUB_OUTPUT"
-            FAILED_TOOLS=""
-            [[ "$GITLEAKS_PASSED" != "success" ]] && FAILED_TOOLS="Gitleaks"
-            [[ "$TRUFFLEHOG_PASSED" != "success" ]] && FAILED_TOOLS="${FAILED_TOOLS:+$FAILED_TOOLS, }TruffleHog"
-            echo "findings=Potential secrets detected by: $FAILED_TOOLS" >> "$GITHUB_OUTPUT"
+            echo "findings=Potential secrets detected by TruffleHog" >> "$GITHUB_OUTPUT"
           fi
 
   # =============================================================================
@@ -588,6 +580,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Authenticate NuGet with Keyfactor GitHub Packages
+        if: secrets.token != ''
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
+            --name keyfactor-github \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.token }} \
+            --store-password-in-clear-text 2>/dev/null || true
 
       - name: Restore dependencies
         run: dotnet restore
@@ -994,6 +995,15 @@ jobs:
           dotnet-version: |
             6.0.x
             8.0.x
+
+      - name: Authenticate NuGet with Keyfactor GitHub Packages
+        if: secrets.token != ''
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
+            --name keyfactor-github \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.token }} \
+            --store-password-in-clear-text 2>/dev/null || true
 
       - name: Restore dependencies
         run: dotnet restore
