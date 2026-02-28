@@ -1,0 +1,478 @@
+name: Signoff Notification
+
+# =============================================================================
+# Signoff Notification Workflow
+#
+# Sends email notifications when a PR is labeled "ready for signoff".
+# Includes links to:
+#   - PR approval page
+#   - Azure DevOps work item (if branch follows ab#<number> convention)
+#   - PR diff and conversation
+# =============================================================================
+
+on:
+  workflow_call:
+    inputs:
+      recipients:
+        description: 'Comma-separated list of email addresses'
+        type: string
+        required: false
+        default: ''
+      devops_org_url:
+        description: 'Azure DevOps organization URL'
+        type: string
+        required: false
+        default: 'https://dev.azure.com/Keyfactor/Integration/_workitems/edit'
+      devops_org:
+        description: 'Azure DevOps organization name'
+        type: string
+        required: false
+        default: 'Keyfactor'
+      devops_project:
+        description: 'Azure DevOps project name'
+        type: string
+        required: false
+        default: 'Integration'
+      devops_tag:
+        description: 'Tag to apply to Azure DevOps work item'
+        type: string
+        required: false
+        default: 'Ready for Signoff'
+      sync_devops_tag:
+        description: 'Whether to sync the tag to Azure DevOps'
+        type: boolean
+        required: false
+        default: true
+    secrets:
+      token:
+        description: 'GitHub token for API access'
+        required: true
+      smtp_server:
+        description: 'SMTP server hostname'
+        required: true
+      smtp_port:
+        description: 'SMTP server port'
+        required: false
+      smtp_username:
+        description: 'SMTP username'
+        required: true
+      smtp_password:
+        description: 'SMTP password'
+        required: true
+      email_from:
+        description: 'From email address'
+        required: true
+      azure_devops_token:
+        description: 'Azure DevOps PAT for API access'
+        required: false
+
+  pull_request:
+    types: [labeled]
+
+jobs:
+  send-notification:
+    name: Send Signoff Notification
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'ready for signoff'
+    steps:
+      - name: Extract PR information
+        id: pr-info
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+        run: |
+          # PR details
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          REPO="${{ github.repository }}"
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "pr_author=$PR_AUTHOR" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "base_branch=$BASE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+
+          # Approval URL (GitHub review URL)
+          APPROVE_URL="${PR_URL}/files#submit-review"
+          echo "approve_url=$APPROVE_URL" >> "$GITHUB_OUTPUT"
+
+          # Extract Azure DevOps work item number from branch name
+          # Supports: ab#123, AB#123, ab#123-feature, feature-ab#123, etc.
+          if [[ "$BRANCH" =~ [aA][bB]#([0-9]+) ]]; then
+            DEVOPS_NUMBER="${BASH_REMATCH[1]}"
+            DEVOPS_URL="${{ inputs.devops_org_url || 'https://dev.azure.com/Keyfactor/Integration/_workitems/edit' }}/${DEVOPS_NUMBER}"
+            echo "devops_number=$DEVOPS_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "devops_url=$DEVOPS_URL" >> "$GITHUB_OUTPUT"
+            echo "has_devops=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_devops=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Get PR description (first 500 chars)
+          PR_BODY=$(echo '${{ github.event.pull_request.body }}' | head -c 500)
+          # Escape for GitHub output
+          PR_BODY="${PR_BODY//'%'/'%25'}"
+          PR_BODY="${PR_BODY//$'\n'/'%0A'}"
+          PR_BODY="${PR_BODY//$'\r'/'%0D'}"
+          echo "pr_body=$PR_BODY" >> "$GITHUB_OUTPUT"
+
+          # Get changed files count
+          CHANGED_FILES="${{ github.event.pull_request.changed_files }}"
+          ADDITIONS="${{ github.event.pull_request.additions }}"
+          DELETIONS="${{ github.event.pull_request.deletions }}"
+          echo "changed_files=$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+          echo "additions=$ADDITIONS" >> "$GITHUB_OUTPUT"
+          echo "deletions=$DELETIONS" >> "$GITHUB_OUTPUT"
+
+          # Construct useful links
+          # Working Branch URL
+          BRANCH_URL="https://github.com/$REPO/tree/$BRANCH"
+          echo "branch_url=$BRANCH_URL" >> "$GITHUB_OUTPUT"
+
+          # Changelog URL on source branch
+          CHANGELOG_URL="https://github.com/$REPO/blob/$BRANCH/CHANGELOG.md"
+          echo "changelog_url=$CHANGELOG_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest pre-release
+        id: prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+        run: |
+          # Find the latest pre-release/RC for this branch
+          BRANCH="${{ steps.pr-info.outputs.branch }}"
+          BASE_BRANCH="${{ steps.pr-info.outputs.base_branch }}"
+
+          # Extract version from release branch (e.g., release-1.2 -> 1.2)
+          if [[ "$BASE_BRANCH" == release-* ]]; then
+            VERSION="${BASE_BRANCH#release-}"
+
+            # Find latest RC tag matching this version
+            LATEST_RC=$(gh release list --limit 50 | grep -E "^v?${VERSION}\.[0-9]+-rc" | head -1 | awk '{print $1}' || echo "")
+
+            if [[ -n "$LATEST_RC" ]]; then
+              RC_URL="https://github.com/${{ github.repository }}/releases/tag/$LATEST_RC"
+              echo "latest_rc=$LATEST_RC" >> "$GITHUB_OUTPUT"
+              echo "rc_url=$RC_URL" >> "$GITHUB_OUTPUT"
+              echo "has_rc=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_rc=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "has_rc=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get recipients
+        id: recipients
+        shell: bash
+        run: |
+          # Priority: input > repository variable > default
+          RECIPIENTS="${{ inputs.recipients }}"
+
+          if [[ -z "$RECIPIENTS" ]]; then
+            RECIPIENTS="${{ vars.SIGNOFF_RECIPIENTS }}"
+          fi
+
+          if [[ -z "$RECIPIENTS" ]]; then
+            echo "::warning::No recipients configured. Set SIGNOFF_RECIPIENTS variable or pass recipients input."
+            echo "has_recipients=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "recipients=$RECIPIENTS" >> "$GITHUB_OUTPUT"
+            echo "has_recipients=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate email body
+        id: email
+        if: steps.recipients.outputs.has_recipients == 'true'
+        shell: bash
+        run: |
+          cat > email_body.html << 'EMAILEOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #24292e; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #0366d6; color: white; padding: 20px; border-radius: 6px 6px 0 0; }
+              .header h1 { margin: 0; font-size: 24px; }
+              .content { background: #f6f8fa; padding: 20px; border: 1px solid #e1e4e8; }
+              .section { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e1e4e8; }
+              .section h3 { margin-top: 0; color: #24292e; border-bottom: 1px solid #e1e4e8; padding-bottom: 8px; }
+              .btn { display: inline-block; padding: 10px 20px; margin: 5px; border-radius: 6px; text-decoration: none; font-weight: 600; }
+              .btn-primary { background: #2ea44f; color: white; }
+              .btn-secondary { background: #0366d6; color: white; }
+              .btn-devops { background: #0078d4; color: white; }
+              .stats { display: flex; gap: 20px; margin: 10px 0; }
+              .stat { text-align: center; }
+              .stat-value { font-size: 24px; font-weight: bold; }
+              .stat-label { font-size: 12px; color: #586069; }
+              .additions { color: #22863a; }
+              .deletions { color: #cb2431; }
+              .footer { padding: 20px; text-align: center; color: #586069; font-size: 12px; }
+              .meta { color: #586069; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>🔔 PR Ready for Signoff</h1>
+              </div>
+              <div class="content">
+                <div class="section">
+                  <h3>Pull Request #${{ steps.pr-info.outputs.pr_number }}</h3>
+                  <p><strong>${{ steps.pr-info.outputs.pr_title }}</strong></p>
+                  <p class="meta">
+                    <strong>Author:</strong> @${{ steps.pr-info.outputs.pr_author }}<br>
+                    <strong>Branch:</strong> <code>${{ steps.pr-info.outputs.branch }}</code> → <code>${{ steps.pr-info.outputs.base_branch }}</code><br>
+                    <strong>Repository:</strong> ${{ steps.pr-info.outputs.repo }}
+                  </p>
+                </div>
+
+                <div class="section">
+                  <h3>Changes Summary</h3>
+                  <div class="stats">
+                    <div class="stat">
+                      <div class="stat-value">${{ steps.pr-info.outputs.changed_files }}</div>
+                      <div class="stat-label">Files Changed</div>
+                    </div>
+                    <div class="stat">
+                      <div class="stat-value additions">+${{ steps.pr-info.outputs.additions }}</div>
+                      <div class="stat-label">Additions</div>
+                    </div>
+                    <div class="stat">
+                      <div class="stat-value deletions">-${{ steps.pr-info.outputs.deletions }}</div>
+                      <div class="stat-label">Deletions</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section">
+                  <h3>Quick Links</h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;"><strong>PR</strong></td>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;"><a href="${{ steps.pr-info.outputs.pr_url }}">#${{ steps.pr-info.outputs.pr_number }} - ${{ steps.pr-info.outputs.pr_title }}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;"><strong>RC</strong></td>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;">RCPLACEHOLDER</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;"><strong>WB</strong></td>
+                      <td style="padding: 8px; border-bottom: 1px solid #e1e4e8;"><a href="${{ steps.pr-info.outputs.branch_url }}">${{ steps.pr-info.outputs.branch }}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px;"><strong>ChangeLog</strong></td>
+                      <td style="padding: 8px;"><a href="${{ steps.pr-info.outputs.changelog_url }}">CHANGELOG.md</a></td>
+                    </tr>
+                  </table>
+                </div>
+
+                <div class="section">
+                  <h3>Actions</h3>
+                  <p>Please review and approve this pull request:</p>
+                  <a href="${{ steps.pr-info.outputs.approve_url }}" class="btn btn-primary">✅ Review & Approve</a>
+                  <a href="${{ steps.pr-info.outputs.pr_url }}" class="btn btn-secondary">👁️ View PR</a>
+          EMAILEOF
+
+          # Add DevOps link if available
+          if [[ "${{ steps.pr-info.outputs.has_devops }}" == "true" ]]; then
+            cat >> email_body.html << 'DEVOPSEOF'
+                  <a href="${{ steps.pr-info.outputs.devops_url }}" class="btn btn-devops">📋 DevOps Item #${{ steps.pr-info.outputs.devops_number }}</a>
+          DEVOPSEOF
+          fi
+
+          cat >> email_body.html << 'FOOTEREOF'
+                </div>
+              </div>
+              <div class="footer">
+                <p>This notification was sent by Keyfactor Integration CI/CD</p>
+                <p>
+                  <a href="${{ steps.pr-info.outputs.pr_url }}">View on GitHub</a>
+          FOOTEREOF
+
+          if [[ "${{ steps.pr-info.outputs.has_devops }}" == "true" ]]; then
+            echo "          | <a href=\"\${{ steps.pr-info.outputs.devops_url }}\">View in Azure DevOps</a>" >> email_body.html
+          fi
+
+          cat >> email_body.html << 'ENDEOF'
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+          ENDEOF
+
+          # Replace placeholders with actual values
+          sed -i "s|\${{ steps.pr-info.outputs.pr_number }}|${{ steps.pr-info.outputs.pr_number }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.pr_title }}|${{ steps.pr-info.outputs.pr_title }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.pr_author }}|${{ steps.pr-info.outputs.pr_author }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.branch }}|${{ steps.pr-info.outputs.branch }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.base_branch }}|${{ steps.pr-info.outputs.base_branch }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.repo }}|${{ steps.pr-info.outputs.repo }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.changed_files }}|${{ steps.pr-info.outputs.changed_files }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.additions }}|${{ steps.pr-info.outputs.additions }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.deletions }}|${{ steps.pr-info.outputs.deletions }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.approve_url }}|${{ steps.pr-info.outputs.approve_url }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.pr_url }}|${{ steps.pr-info.outputs.pr_url }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.devops_url }}|${{ steps.pr-info.outputs.devops_url }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.devops_number }}|${{ steps.pr-info.outputs.devops_number }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.branch_url }}|${{ steps.pr-info.outputs.branch_url }}|g" email_body.html
+          sed -i "s|\${{ steps.pr-info.outputs.changelog_url }}|${{ steps.pr-info.outputs.changelog_url }}|g" email_body.html
+
+          # Replace RC placeholder
+          if [[ "${{ steps.prerelease.outputs.has_rc }}" == "true" ]]; then
+            RC_LINK="<a href=\"${{ steps.prerelease.outputs.rc_url }}\">${{ steps.prerelease.outputs.latest_rc }}</a>"
+            sed -i "s|RCPLACEHOLDER|$RC_LINK|g" email_body.html
+          else
+            sed -i "s|RCPLACEHOLDER|<em>No pre-release yet</em>|g" email_body.html
+          fi
+
+          echo "Email body generated"
+
+      - name: Send email notification
+        if: steps.recipients.outputs.has_recipients == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.smtp_server }}
+          server_port: ${{ secrets.smtp_port || 587 }}
+          username: ${{ secrets.smtp_username }}
+          password: ${{ secrets.smtp_password }}
+          subject: "[Signoff Required] PR #${{ steps.pr-info.outputs.pr_number }}: ${{ steps.pr-info.outputs.pr_title }}"
+          to: ${{ steps.recipients.outputs.recipients }}
+          from: ${{ secrets.email_from }}
+          html_body: file://email_body.html
+          priority: high
+
+      - name: Tag Azure DevOps work item
+        id: devops-tag
+        if: |
+          steps.pr-info.outputs.has_devops == 'true' &&
+          (inputs.sync_devops_tag == true || inputs.sync_devops_tag == '')
+        shell: bash
+        env:
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.azure_devops_token }}
+        run: |
+          WORK_ITEM_ID="${{ steps.pr-info.outputs.devops_number }}"
+          ORG="${{ inputs.devops_org || 'Keyfactor' }}"
+          PROJECT="${{ inputs.devops_project || 'Integration' }}"
+          TAG="${{ inputs.devops_tag || 'Ready for Signoff' }}"
+
+          if [[ -z "$AZURE_DEVOPS_EXT_PAT" ]]; then
+            echo "::warning::Azure DevOps PAT not configured. Skipping tag sync."
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+            echo "error=No PAT configured" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Tagging work item #$WORK_ITEM_ID with '$TAG'..."
+
+          # Install Azure DevOps CLI extension
+          az extension add --name azure-devops --only-show-errors 2>/dev/null || true
+
+          # Configure defaults
+          az devops configure --defaults organization="https://dev.azure.com/$ORG" project="$PROJECT"
+
+          # Get current tags
+          CURRENT_TAGS=$(az boards work-item show --id "$WORK_ITEM_ID" --query "fields.\"System.Tags\"" -o tsv 2>/dev/null || echo "")
+
+          # Add new tag if not already present
+          if [[ "$CURRENT_TAGS" == *"$TAG"* ]]; then
+            echo "Tag '$TAG' already exists on work item #$WORK_ITEM_ID"
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+            echo "already_tagged=true" >> "$GITHUB_OUTPUT"
+          else
+            # Append new tag
+            if [[ -n "$CURRENT_TAGS" ]]; then
+              NEW_TAGS="$CURRENT_TAGS; $TAG"
+            else
+              NEW_TAGS="$TAG"
+            fi
+
+            # Update work item
+            if az boards work-item update --id "$WORK_ITEM_ID" --fields "System.Tags=$NEW_TAGS" --only-show-errors; then
+              echo "Successfully tagged work item #$WORK_ITEM_ID with '$TAG'"
+              echo "tagged=true" >> "$GITHUB_OUTPUT"
+              echo "already_tagged=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Failed to tag work item #$WORK_ITEM_ID"
+              echo "tagged=false" >> "$GITHUB_OUTPUT"
+              echo "error=API call failed" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+          # Build comprehensive comment with all links
+          COMMENT="<div><strong>🔔 GitHub PR Ready for Signoff</strong></div><br/>"
+          COMMENT+="<div><strong>PR:</strong> <a href=\"${{ steps.pr-info.outputs.pr_url }}\">#${{ steps.pr-info.outputs.pr_number }} - ${{ steps.pr-info.outputs.pr_title }}</a></div>"
+
+          if [[ "${{ steps.prerelease.outputs.has_rc }}" == "true" ]]; then
+            COMMENT+="<div><strong>RC:</strong> <a href=\"${{ steps.prerelease.outputs.rc_url }}\">${{ steps.prerelease.outputs.latest_rc }}</a></div>"
+          fi
+
+          COMMENT+="<div><strong>WB:</strong> <a href=\"${{ steps.pr-info.outputs.branch_url }}\">${{ steps.pr-info.outputs.branch }}</a></div>"
+          COMMENT+="<div><strong>ChangeLog:</strong> <a href=\"${{ steps.pr-info.outputs.changelog_url }}\">CHANGELOG.md</a></div>"
+
+          az boards work-item update --id "$WORK_ITEM_ID" --discussion "$COMMENT" --only-show-errors || echo "::warning::Failed to add comment"
+
+      - name: Post summary
+        shell: bash
+        run: |
+          echo "### 📧 Signoff Notification Sent" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Property | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PR | #${{ steps.pr-info.outputs.pr_number }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Title | ${{ steps.pr-info.outputs.pr_title }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Author | @${{ steps.pr-info.outputs.pr_author }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | \`${{ steps.pr-info.outputs.branch }}\` → \`${{ steps.pr-info.outputs.base_branch }}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.pr-info.outputs.has_devops }}" == "true" ]]; then
+            echo "| DevOps Item | [#${{ steps.pr-info.outputs.devops_number }}](${{ steps.pr-info.outputs.devops_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+
+            if [[ "${{ steps.devops-tag.outputs.tagged }}" == "true" ]]; then
+              if [[ "${{ steps.devops-tag.outputs.already_tagged }}" == "true" ]]; then
+                echo "| DevOps Tag | ✅ Already tagged |" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "| DevOps Tag | ✅ Tagged with '${{ inputs.devops_tag || 'Ready for Signoff' }}' |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            elif [[ -n "${{ steps.devops-tag.outputs.error }}" ]]; then
+              echo "| DevOps Tag | ⚠️ ${{ steps.devops-tag.outputs.error }} |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          if [[ "${{ steps.recipients.outputs.has_recipients }}" == "true" ]]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Recipients:** ${{ steps.recipients.outputs.recipients }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ **No recipients configured.** Set \`SIGNOFF_RECIPIENTS\` repository variable." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Quick Links:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Link | URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PR | [${{ steps.pr-info.outputs.pr_title }}](${{ steps.pr-info.outputs.pr_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.prerelease.outputs.has_rc }}" == "true" ]]; then
+            echo "| RC | [${{ steps.prerelease.outputs.latest_rc }}](${{ steps.prerelease.outputs.rc_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| RC | *No pre-release yet* |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "| WB | [${{ steps.pr-info.outputs.branch }}](${{ steps.pr-info.outputs.branch_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ChangeLog | [CHANGELOG.md](${{ steps.pr-info.outputs.changelog_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.pr-info.outputs.has_devops }}" == "true" ]]; then
+            echo "| DevOps | [#${{ steps.pr-info.outputs.devops_number }}](${{ steps.pr-info.outputs.devops_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Actions:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Review & Approve](${{ steps.pr-info.outputs.approve_url }})" >> "$GITHUB_STEP_SUMMARY"

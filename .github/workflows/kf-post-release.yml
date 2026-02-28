@@ -1,17 +1,27 @@
-name: Post release tasks
-on: 
+name: Post Release Tasks
+
+# =============================================================================
+# Post Release Workflow
+#
+# Creates a PR to merge the release branch back into main after a release.
+# This ensures main stays up-to-date with release changes.
+#
+# Only runs when a PR is actually merged to a release branch.
+# =============================================================================
+
+on:
   workflow_call:
     secrets:
       token:
-        description: token
+        description: 'GitHub token for creating PRs'
         required: true
     inputs:
       branchname:
-        description: Release branch tag being merged to main
+        description: 'Release branch name (e.g., release-1.2)'
         required: true
         type: string
       release_version:
-        description: Release branch tag being merged to main
+        description: 'Release version that was created (e.g., 1.2.0)'
         required: true
         type: string
 
@@ -20,23 +30,84 @@ jobs:
     name: Create PR from release branch to main
     runs-on: ubuntu-latest
     steps:
+      - name: Validate inputs
+        id: validate
+        shell: bash
+        run: |
+          BRANCH="${{ inputs.branchname }}"
+          VERSION="${{ inputs.release_version }}"
+
+          # Validate that we have valid inputs
+          if [[ -z "$BRANCH" || -z "$VERSION" ]]; then
+            echo "::error::Missing required inputs: branchname='$BRANCH', release_version='$VERSION'"
+            exit 1
+          fi
+
+          # Validate branch is a release branch
+          if [[ ! "$BRANCH" =~ ^release- ]]; then
+            echo "::error::Branch '$BRANCH' is not a release branch (expected release-*)"
+            exit 1
+          fi
+
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+          echo "Validated: Creating PR for $VERSION from $BRANCH to main"
+
       - name: Checkout Source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # fetch-depth added: https://github.com/devops-infra/action-pull-request/issues/51
-      # - name: Remove prereleases
-      #   uses: Keyfactor/action-delete-prereleases@versioned-prereleases
-      #   with:
-      #     repo-token: ${{ secrets.token }}
-      #     release_version: ${{ inputs.release_version }}
+          token: ${{ secrets.token }}
+
+      - name: Check for differences
+        id: diff
+        shell: bash
+        run: |
+          git fetch origin main
+          git fetch origin ${{ inputs.branchname }}
+
+          # Check if there are any commits to merge
+          DIFF_COUNT=$(git rev-list --count origin/main..origin/${{ inputs.branchname }} 2>/dev/null || echo "0")
+
+          if [[ "$DIFF_COUNT" == "0" ]]; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+            echo "No commits to merge from ${{ inputs.branchname }} to main"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            echo "$DIFF_COUNT commit(s) to merge from ${{ inputs.branchname }} to main"
+          fi
 
       - name: Create PR to main
+        if: steps.diff.outputs.has_diff == 'true'
         uses: Keyfactor/action-pull-request@v0.5.5
         with:
           github_token: ${{ secrets.token }}
           source_branch: ${{ inputs.branchname }}
           target_branch: main
-          allow_no_diff: true
-          title: Merge ${{ inputs.release_version }} to main
-          body: "Merge ${{ inputs.branchname }} to main - Automated PR"
+          allow_no_diff: false
+          title: "chore(release): merge ${{ inputs.release_version }} into main"
+          body: |
+            ## Release Merge
+
+            This PR merges the release branch `${{ inputs.branchname }}` into `main` after the release of **${{ inputs.release_version }}**.
+
+            ### Details
+            - **Release Version:** ${{ inputs.release_version }}
+            - **Source Branch:** `${{ inputs.branchname }}`
+            - **Target Branch:** `main`
+
+            ### Checklist
+            - [ ] Review any merge conflicts
+            - [ ] Ensure CI passes
+            - [ ] Merge when ready
+
+            ---
+            *This PR was automatically created by the release workflow.*
+
+      - name: Skip PR (no changes)
+        if: steps.diff.outputs.has_diff != 'true'
+        run: |
+          echo "### No PR Created" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "No commits to merge from \`${{ inputs.branchname }}\` to \`main\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "The branches are already in sync." >> "$GITHUB_STEP_SUMMARY"

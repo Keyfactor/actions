@@ -91,7 +91,7 @@ jobs:
       goreleaser_exists: ${{ steps.goreleaser.outputs.exists }}
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Detect language
         id: language
@@ -206,13 +206,27 @@ jobs:
   post-release:
     name: Post-Release
     needs: [detect-context, create-release]
-    if: needs.create-release.outputs.is_full_release == 'true'
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      needs.create-release.outputs.is_full_release == 'true'
     uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v6
     secrets:
       token: ${{ secrets.token }}
     with:
       branchname: ${{ github.event.pull_request.base.ref }}
       release_version: ${{ needs.create-release.outputs.release_version }}
+
+  cleanup-prereleases:
+    name: Cleanup Pre-releases
+    needs: create-release
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      needs.create-release.outputs.is_full_release == 'true'
+    uses: Keyfactor/actions/.github/workflows/kf-delete-prereleases.yml@v6
+    secrets:
+      token: ${{ secrets.token }}
 
   generate-sbom:
     name: Generate SBOM

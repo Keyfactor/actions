@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ''
+      allow_test_failure:
+        description: 'If true, test failures will not block the PR (for projects without tests)'
+        required: false
+        type: boolean
+        default: false
     outputs:
       # Core checks
       secrets_scan_passed:
@@ -89,6 +94,12 @@ on:
       license_compliance_findings:
         description: 'License compliance findings'
         value: ${{ jobs.aggregate-results.outputs.license_compliance_findings }}
+      tests_passed:
+        description: 'Whether unit tests passed'
+        value: ${{ jobs.aggregate-results.outputs.tests_passed }}
+      tests_findings:
+        description: 'Unit test findings'
+        value: ${{ jobs.aggregate-results.outputs.tests_findings }}
       all_checks_passed:
         description: 'Whether all blocking checks passed'
         value: ${{ jobs.aggregate-results.outputs.all_checks_passed }}
@@ -209,7 +220,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Dependency Review
         id: review
@@ -243,7 +254,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Check for labeler config
         id: check-config
@@ -273,7 +284,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -324,7 +335,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -374,7 +385,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -424,7 +435,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -464,7 +475,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -511,7 +522,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -571,7 +582,7 @@ jobs:
       formatting_findings: ${{ steps.format-result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -679,7 +690,7 @@ jobs:
       formatting_findings: ${{ steps.format-result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -741,7 +752,7 @@ jobs:
       # Linting
       - name: Run golangci-lint
         id: lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m --out-format=line-number
@@ -774,7 +785,7 @@ jobs:
       formatting_findings: ${{ steps.format-result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -873,7 +884,7 @@ jobs:
       findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Detect project type
         id: detect
@@ -963,6 +974,131 @@ jobs:
           fi
 
   # =============================================================================
+  # 15. Unit Tests (.NET)
+  # =============================================================================
+  unit-tests-dotnet:
+    name: Unit Tests (.NET)
+    runs-on: ubuntu-latest
+    if: inputs.primary_language == 'C#'
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+      test_count: ${{ steps.result.outputs.test_count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+        continue-on-error: true
+
+      - name: Find test projects
+        id: find-tests
+        shell: bash
+        run: |
+          # Auto-detect test projects
+          TEST_PROJECTS=$(find . -name "*.csproj" | xargs grep -l "Microsoft.NET.Test.Sdk\|xunit\|NUnit\|MSTest" 2>/dev/null | tr '\n' ' ' || echo "")
+
+          if [[ -z "$TEST_PROJECTS" ]]; then
+            TEST_PROJECTS=$(find . -name "*[Tt]est*.csproj" -o -name "*[Tt]ests*.csproj" 2>/dev/null | tr '\n' ' ' || echo "")
+          fi
+
+          if [[ -z "$TEST_PROJECTS" ]]; then
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+            echo "test_projects=$TEST_PROJECTS" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        id: run-tests
+        if: steps.find-tests.outputs.has_tests == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          dotnet test --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "console;verbosity=normal" \
+            --results-directory ./TestResults \
+            --no-build 2>&1 || dotnet test --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "console;verbosity=normal" \
+            --results-directory ./TestResults 2>&1
+          TEST_EXIT=$?
+          set -e
+
+          echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
+
+      - name: Parse results
+        id: parse
+        if: steps.find-tests.outputs.has_tests == 'true'
+        shell: bash
+        run: |
+          # Parse TRX for results
+          TRX_FILE=$(find ./TestResults -name "*.trx" 2>/dev/null | head -1 || echo "")
+
+          if [[ -n "$TRX_FILE" ]]; then
+            TOTAL=$(grep -oP 'total="\K\d+' "$TRX_FILE" | head -1 || echo "0")
+            PASSED=$(grep -oP 'passed="\K\d+' "$TRX_FILE" | head -1 || echo "0")
+            FAILED=$(grep -oP 'failed="\K\d+' "$TRX_FILE" | head -1 || echo "0")
+
+            echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+            echo "passed_count=$PASSED" >> "$GITHUB_OUTPUT"
+            echo "failed_count=$FAILED" >> "$GITHUB_OUTPUT"
+          else
+            echo "total=0" >> "$GITHUB_OUTPUT"
+            echo "passed_count=0" >> "$GITHUB_OUTPUT"
+            echo "failed_count=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        shell: bash
+        run: |
+          if [[ "${{ steps.find-tests.outputs.has_tests }}" != "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No test projects found" >> "$GITHUB_OUTPUT"
+            echo "test_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TOTAL="${{ steps.parse.outputs.total || '0' }}"
+          PASSED="${{ steps.parse.outputs.passed_count || '0' }}"
+          FAILED="${{ steps.parse.outputs.failed_count || '0' }}"
+          EXIT_CODE="${{ steps.run-tests.outputs.exit_code || '0' }}"
+
+          echo "test_count=$TOTAL" >> "$GITHUB_OUTPUT"
+
+          if [[ "$EXIT_CODE" == "0" ]] || [[ "$FAILED" == "0" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=$PASSED/$TOTAL tests passed" >> "$GITHUB_OUTPUT"
+          else
+            if [[ "${{ inputs.allow_test_failure }}" == "true" ]]; then
+              echo "passed=true" >> "$GITHUB_OUTPUT"
+              echo "findings=$FAILED/$TOTAL tests failed (allowed)" >> "$GITHUB_OUTPUT"
+            else
+              echo "passed=false" >> "$GITHUB_OUTPUT"
+              echo "findings=$FAILED/$TOTAL tests failed" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Upload results
+        if: always() && steps.find-tests.outputs.has_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results
+          path: ./TestResults/**/*.trx
+          if-no-files-found: ignore
+
+  # =============================================================================
   # Aggregate Results
   # =============================================================================
   aggregate-results:
@@ -982,6 +1118,7 @@ jobs:
       - code-quality-go
       - code-quality-java
       - license-compliance
+      - unit-tests-dotnet
     if: always()
     outputs:
       # Original checks
@@ -1012,6 +1149,8 @@ jobs:
       formatting_findings: ${{ steps.aggregate.outputs.formatting_findings }}
       license_compliance_passed: ${{ steps.aggregate.outputs.license_compliance_passed }}
       license_compliance_findings: ${{ steps.aggregate.outputs.license_compliance_findings }}
+      tests_passed: ${{ steps.aggregate.outputs.tests_passed }}
+      tests_findings: ${{ steps.aggregate.outputs.tests_findings }}
       all_checks_passed: ${{ steps.aggregate.outputs.all_checks_passed }}
     steps:
       - name: Aggregate all results
@@ -1048,6 +1187,9 @@ jobs:
 
           echo "license_compliance_passed=${{ needs.license-compliance.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
           echo "license_compliance_findings=${{ needs.license-compliance.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "tests_passed=${{ needs.unit-tests-dotnet.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "tests_findings=${{ needs.unit-tests-dotnet.outputs.findings || 'No tests ran' }}" >> "$GITHUB_OUTPUT"
 
           # Code quality - aggregate from language-specific jobs
           CODE_QUALITY_PASSED="true"
@@ -1101,6 +1243,7 @@ jobs:
           [[ "${CODE_QUALITY_PASSED}" == "false" ]] && ALL_PASSED="false"
           [[ "${VULN_PASSED}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.license-compliance.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.unit-tests-dotnet.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
 
           # Non-blocking checks (warnings only): prohibited_keywords, formatting, breaking_change
 

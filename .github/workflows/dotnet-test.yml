@@ -1,0 +1,328 @@
+name: .NET Tests
+
+# =============================================================================
+# .NET Test Workflow
+#
+# Runs unit tests for .NET projects with code coverage reporting.
+# Supports projects without tests via the `allow_failure` input.
+# =============================================================================
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version(s) to use'
+        type: string
+        required: false
+        default: |
+          6.0.x
+          8.0.x
+      allow_failure:
+        description: 'If true, test failures will not fail the workflow (for projects without tests)'
+        type: boolean
+        required: false
+        default: false
+      test_filter:
+        description: 'Filter expression for test selection (--filter)'
+        type: string
+        required: false
+        default: ''
+      test_project:
+        description: 'Specific test project or solution to run (default: auto-detect)'
+        type: string
+        required: false
+        default: ''
+      configuration:
+        description: 'Build configuration'
+        type: string
+        required: false
+        default: 'Release'
+      collect_coverage:
+        description: 'Whether to collect code coverage'
+        type: boolean
+        required: false
+        default: true
+      coverage_threshold:
+        description: 'Minimum code coverage percentage (0 to disable)'
+        type: number
+        required: false
+        default: 0
+      upload_results:
+        description: 'Whether to upload test results as artifacts'
+        type: boolean
+        required: false
+        default: true
+    secrets:
+      token:
+        description: 'GitHub token for NuGet authentication'
+        required: false
+    outputs:
+      tests_passed:
+        description: 'Whether all tests passed'
+        value: ${{ jobs.test.outputs.tests_passed }}
+      tests_found:
+        description: 'Whether any tests were found'
+        value: ${{ jobs.test.outputs.tests_found }}
+      test_count:
+        description: 'Total number of tests run'
+        value: ${{ jobs.test.outputs.test_count }}
+      passed_count:
+        description: 'Number of passed tests'
+        value: ${{ jobs.test.outputs.passed_count }}
+      failed_count:
+        description: 'Number of failed tests'
+        value: ${{ jobs.test.outputs.failed_count }}
+      skipped_count:
+        description: 'Number of skipped tests'
+        value: ${{ jobs.test.outputs.skipped_count }}
+      coverage_percent:
+        description: 'Code coverage percentage'
+        value: ${{ jobs.test.outputs.coverage_percent }}
+
+jobs:
+  test:
+    name: Run .NET Tests
+    runs-on: ubuntu-latest
+    outputs:
+      tests_passed: ${{ steps.results.outputs.tests_passed }}
+      tests_found: ${{ steps.results.outputs.tests_found }}
+      test_count: ${{ steps.results.outputs.test_count }}
+      passed_count: ${{ steps.results.outputs.passed_count }}
+      failed_count: ${{ steps.results.outputs.failed_count }}
+      skipped_count: ${{ steps.results.outputs.skipped_count }}
+      coverage_percent: ${{ steps.coverage.outputs.coverage_percent }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Authenticate NuGet
+        if: secrets.token != ''
+        shell: bash
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
+            --name keyfactor-github \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.token }} \
+            --store-password-in-clear-text 2>/dev/null || true
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Find test projects
+        id: find-tests
+        shell: bash
+        run: |
+          # Look for test projects
+          if [[ -n "${{ inputs.test_project }}" ]]; then
+            TEST_PROJECTS="${{ inputs.test_project }}"
+            echo "Using specified test project: $TEST_PROJECTS"
+          else
+            # Auto-detect test projects (common patterns)
+            TEST_PROJECTS=$(find . -name "*.csproj" | xargs grep -l "Microsoft.NET.Test.Sdk\|xunit\|NUnit\|MSTest" 2>/dev/null | tr '\n' ' ' || echo "")
+
+            if [[ -z "$TEST_PROJECTS" ]]; then
+              # Fallback: look for projects with Test/Tests in name
+              TEST_PROJECTS=$(find . -name "*[Tt]est*.csproj" -o -name "*[Tt]ests*.csproj" 2>/dev/null | tr '\n' ' ' || echo "")
+            fi
+          fi
+
+          if [[ -z "$TEST_PROJECTS" ]]; then
+            echo "No test projects found"
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+            echo "test_projects=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Found test projects: $TEST_PROJECTS"
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+            echo "test_projects=$TEST_PROJECTS" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        id: run-tests
+        if: steps.find-tests.outputs.has_tests == 'true'
+        continue-on-error: ${{ inputs.allow_failure }}
+        shell: bash
+        run: |
+          TEST_ARGS="--configuration ${{ inputs.configuration }}"
+          TEST_ARGS="$TEST_ARGS --logger \"trx;LogFileName=test-results.trx\""
+          TEST_ARGS="$TEST_ARGS --logger \"console;verbosity=normal\""
+          TEST_ARGS="$TEST_ARGS --results-directory ./TestResults"
+
+          # Add filter if specified
+          if [[ -n "${{ inputs.test_filter }}" ]]; then
+            TEST_ARGS="$TEST_ARGS --filter \"${{ inputs.test_filter }}\""
+          fi
+
+          # Add coverage collection
+          if [[ "${{ inputs.collect_coverage }}" == "true" ]]; then
+            TEST_ARGS="$TEST_ARGS --collect:\"XPlat Code Coverage\""
+            TEST_ARGS="$TEST_ARGS -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura"
+          fi
+
+          echo "Running: dotnet test $TEST_ARGS"
+
+          # Run tests and capture exit code
+          set +e
+          dotnet test $TEST_ARGS
+          TEST_EXIT_CODE=$?
+          set -e
+
+          echo "test_exit_code=$TEST_EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          if [[ $TEST_EXIT_CODE -eq 0 ]]; then
+            echo "tests_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tests_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parse test results
+        id: results
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ steps.find-tests.outputs.has_tests }}" != "true" ]]; then
+            echo "tests_found=false" >> "$GITHUB_OUTPUT"
+            echo "tests_passed=true" >> "$GITHUB_OUTPUT"
+            echo "test_count=0" >> "$GITHUB_OUTPUT"
+            echo "passed_count=0" >> "$GITHUB_OUTPUT"
+            echo "failed_count=0" >> "$GITHUB_OUTPUT"
+            echo "skipped_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "tests_found=true" >> "$GITHUB_OUTPUT"
+
+          # Parse TRX files for results
+          TRX_FILES=$(find ./TestResults -name "*.trx" 2>/dev/null || echo "")
+
+          if [[ -z "$TRX_FILES" ]]; then
+            echo "No TRX files found"
+            echo "tests_passed=${{ steps.run-tests.outputs.tests_passed || 'true' }}" >> "$GITHUB_OUTPUT"
+            echo "test_count=0" >> "$GITHUB_OUTPUT"
+            echo "passed_count=0" >> "$GITHUB_OUTPUT"
+            echo "failed_count=0" >> "$GITHUB_OUTPUT"
+            echo "skipped_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Aggregate results from all TRX files
+          TOTAL=0
+          PASSED=0
+          FAILED=0
+          SKIPPED=0
+
+          for trx in $TRX_FILES; do
+            # Extract counts using grep/sed (TRX is XML)
+            COUNTERS=$(grep -o 'Counters[^/]*' "$trx" | head -1 || echo "")
+
+            if [[ -n "$COUNTERS" ]]; then
+              T=$(echo "$COUNTERS" | grep -oP 'total="\K\d+' || echo "0")
+              P=$(echo "$COUNTERS" | grep -oP 'passed="\K\d+' || echo "0")
+              F=$(echo "$COUNTERS" | grep -oP 'failed="\K\d+' || echo "0")
+              S=$(echo "$COUNTERS" | grep -oP 'notExecuted="\K\d+' || echo "0")
+
+              TOTAL=$((TOTAL + T))
+              PASSED=$((PASSED + P))
+              FAILED=$((FAILED + F))
+              SKIPPED=$((SKIPPED + S))
+            fi
+          done
+
+          echo "test_count=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "passed_count=$PASSED" >> "$GITHUB_OUTPUT"
+          echo "failed_count=$FAILED" >> "$GITHUB_OUTPUT"
+          echo "skipped_count=$SKIPPED" >> "$GITHUB_OUTPUT"
+
+          if [[ $FAILED -eq 0 ]]; then
+            echo "tests_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tests_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parse coverage
+        id: coverage
+        if: inputs.collect_coverage && steps.find-tests.outputs.has_tests == 'true'
+        shell: bash
+        run: |
+          # Find coverage files
+          COVERAGE_FILE=$(find ./TestResults -name "coverage.cobertura.xml" 2>/dev/null | head -1 || echo "")
+
+          if [[ -z "$COVERAGE_FILE" ]]; then
+            echo "No coverage file found"
+            echo "coverage_percent=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract line coverage from Cobertura XML
+          LINE_RATE=$(grep -oP 'line-rate="\K[0-9.]+' "$COVERAGE_FILE" | head -1 || echo "0")
+          COVERAGE_PERCENT=$(echo "$LINE_RATE * 100" | bc -l 2>/dev/null | cut -d. -f1 || echo "0")
+
+          echo "coverage_percent=${COVERAGE_PERCENT:-0}" >> "$GITHUB_OUTPUT"
+
+          # Check threshold
+          if [[ ${{ inputs.coverage_threshold }} -gt 0 ]]; then
+            if [[ ${COVERAGE_PERCENT:-0} -lt ${{ inputs.coverage_threshold }} ]]; then
+              echo "::warning::Code coverage ${COVERAGE_PERCENT}% is below threshold ${{ inputs.coverage_threshold }}%"
+            fi
+          fi
+
+      - name: Upload test results
+        if: inputs.upload_results && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            ./TestResults/**/*.trx
+            ./TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+      - name: Generate summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### 🧪 .NET Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.find-tests.outputs.has_tests }}" != "true" ]]; then
+            echo "⚠️ **No test projects found**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            if [[ "${{ inputs.allow_failure }}" == "true" ]]; then
+              echo "This is allowed because \`allow_failure: true\` is set." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            exit 0
+          fi
+
+          # Results table
+          echo "| Metric | Count |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Total Tests | ${{ steps.results.outputs.test_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ✅ Passed | ${{ steps.results.outputs.passed_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ❌ Failed | ${{ steps.results.outputs.failed_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ⏭️ Skipped | ${{ steps.results.outputs.skipped_count }} |" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ inputs.collect_coverage }}" == "true" ]]; then
+            echo "| 📊 Coverage | ${{ steps.coverage.outputs.coverage_percent }}% |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.results.outputs.tests_passed }}" == "true" ]]; then
+            echo "✅ **All tests passed!**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Some tests failed**" >> "$GITHUB_STEP_SUMMARY"
+            if [[ "${{ inputs.allow_failure }}" == "true" ]]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "⚠️ Failures are allowed (\`allow_failure: true\`)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+      - name: Fail if tests failed
+        if: |
+          steps.find-tests.outputs.has_tests == 'true' &&
+          steps.results.outputs.tests_passed != 'true' &&
+          inputs.allow_failure != true
+        run: exit 1

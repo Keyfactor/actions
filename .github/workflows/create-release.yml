@@ -58,7 +58,7 @@ jobs:
       increment_level: ${{ steps.context.outputs.increment_level }}
     steps:
       - name: Checkout repository
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
