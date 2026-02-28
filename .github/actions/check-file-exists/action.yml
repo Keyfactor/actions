@@ -1,0 +1,53 @@
+name: 'Check File Exists'
+description: 'Checks if one or more files exist, supporting glob patterns'
+
+inputs:
+  files:
+    description: 'File path or glob pattern to check (e.g., "*.csproj", ".goreleaser.y*ml")'
+    required: true
+
+outputs:
+  exists:
+    description: 'True if any matching file exists'
+    value: ${{ steps.check.outputs.exists }}
+  matched_files:
+    description: 'Comma-separated list of matched files'
+    value: ${{ steps.check.outputs.matched_files }}
+  count:
+    description: 'Number of matched files'
+    value: ${{ steps.check.outputs.count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check for files
+      id: check
+      shell: bash
+      run: |
+        PATTERN="${{ inputs.files }}"
+
+        # Use find with glob pattern or direct file check
+        if [[ "$PATTERN" == *"*"* ]]; then
+          # Glob pattern - use find
+          MATCHES=$(find . -maxdepth 3 -name "$PATTERN" 2>/dev/null | head -20)
+        else
+          # Direct path
+          if [[ -f "$PATTERN" ]]; then
+            MATCHES="$PATTERN"
+          else
+            MATCHES=""
+          fi
+        fi
+
+        if [[ -n "$MATCHES" ]]; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          # Convert newlines to commas
+          FILES_CSV=$(echo "$MATCHES" | tr '\n' ',' | sed 's/,$//')
+          echo "matched_files=$FILES_CSV" >> "$GITHUB_OUTPUT"
+          COUNT=$(echo "$MATCHES" | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "matched_files=" >> "$GITHUB_OUTPUT"
+          echo "count=0" >> "$GITHUB_OUTPUT"
+        fi

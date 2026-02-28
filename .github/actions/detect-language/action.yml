@@ -1,0 +1,76 @@
+name: 'Detect Primary Language'
+description: 'Detects the primary programming language of the repository'
+
+inputs:
+  token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  primary_language:
+    description: 'The detected primary language (C#, Go, Java, etc.)'
+    value: ${{ steps.detect.outputs.primary_language }}
+  is_csharp:
+    description: 'True if primary language is C#'
+    value: ${{ steps.flags.outputs.is_csharp }}
+  is_go:
+    description: 'True if primary language is Go'
+    value: ${{ steps.flags.outputs.is_go }}
+  is_java:
+    description: 'True if primary language is Java'
+    value: ${{ steps.flags.outputs.is_java }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect primary language
+      id: detect
+      shell: bash
+      run: |
+        # Try to detect from GitHub API first
+        LANG=$(gh api repos/${{ github.repository }} --jq '.language // empty' 2>/dev/null || echo "")
+
+        # Fallback: detect from file extensions
+        if [[ -z "$LANG" ]]; then
+          if ls *.csproj 2>/dev/null || find . -maxdepth 3 -name "*.csproj" 2>/dev/null | head -1 | grep -q .; then
+            LANG="C#"
+          elif [[ -f "go.mod" ]]; then
+            LANG="Go"
+          elif [[ -f "pom.xml" ]]; then
+            LANG="Java"
+          elif ls *.sln 2>/dev/null; then
+            LANG="C#"
+          else
+            LANG="Unknown"
+          fi
+        fi
+
+        echo "primary_language=$LANG" >> "$GITHUB_OUTPUT"
+        echo "Detected language: $LANG" >> "$GITHUB_STEP_SUMMARY"
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+
+    - name: Set language flags
+      id: flags
+      shell: bash
+      run: |
+        LANG="${{ steps.detect.outputs.primary_language }}"
+
+        if [[ "$LANG" == "C#" ]]; then
+          echo "is_csharp=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "is_csharp=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [[ "$LANG" == "Go" ]]; then
+          echo "is_go=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "is_go=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [[ "$LANG" == "Java" ]]; then
+          echo "is_java=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "is_java=false" >> "$GITHUB_OUTPUT"
+        fi

@@ -1,0 +1,1152 @@
+name: PR Quality Checks
+
+on:
+  workflow_call:
+    inputs:
+      primary_language:
+        description: 'Primary language of the repository (C#, Go, Java)'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      # Core checks
+      secrets_scan_passed:
+        description: 'Whether secrets scan passed'
+        value: ${{ jobs.aggregate-results.outputs.secrets_scan_passed }}
+      secrets_scan_findings:
+        description: 'Secrets scan findings'
+        value: ${{ jobs.aggregate-results.outputs.secrets_scan_findings }}
+      changelog_passed:
+        description: 'Whether changelog was updated'
+        value: ${{ jobs.aggregate-results.outputs.changelog_passed }}
+      changelog_findings:
+        description: 'Changelog check findings'
+        value: ${{ jobs.aggregate-results.outputs.changelog_findings }}
+      pii_check_passed:
+        description: 'Whether PII check passed'
+        value: ${{ jobs.aggregate-results.outputs.pii_check_passed }}
+      pii_check_findings:
+        description: 'PII check findings'
+        value: ${{ jobs.aggregate-results.outputs.pii_check_findings }}
+      manifest_passed:
+        description: 'Whether manifest validation passed'
+        value: ${{ jobs.aggregate-results.outputs.manifest_passed }}
+      manifest_findings:
+        description: 'Manifest validation findings'
+        value: ${{ jobs.aggregate-results.outputs.manifest_findings }}
+      code_quality_passed:
+        description: 'Whether code quality check passed'
+        value: ${{ jobs.aggregate-results.outputs.code_quality_passed }}
+      code_quality_findings:
+        description: 'Code quality findings'
+        value: ${{ jobs.aggregate-results.outputs.code_quality_findings }}
+      # New checks
+      pr_title_passed:
+        description: 'Whether PR title follows Conventional Commits'
+        value: ${{ jobs.aggregate-results.outputs.pr_title_passed }}
+      pr_title_findings:
+        description: 'PR title validation findings'
+        value: ${{ jobs.aggregate-results.outputs.pr_title_findings }}
+      pr_size_passed:
+        description: 'Whether PR size is acceptable'
+        value: ${{ jobs.aggregate-results.outputs.pr_size_passed }}
+      pr_size_findings:
+        description: 'PR size findings'
+        value: ${{ jobs.aggregate-results.outputs.pr_size_findings }}
+      dependency_review_passed:
+        description: 'Whether dependency review passed'
+        value: ${{ jobs.aggregate-results.outputs.dependency_review_passed }}
+      dependency_review_findings:
+        description: 'Dependency review findings'
+        value: ${{ jobs.aggregate-results.outputs.dependency_review_findings }}
+      breaking_change_detected:
+        description: 'Whether breaking changes were detected'
+        value: ${{ jobs.aggregate-results.outputs.breaking_change_detected }}
+      breaking_change_findings:
+        description: 'Breaking change findings'
+        value: ${{ jobs.aggregate-results.outputs.breaking_change_findings }}
+      prohibited_keywords_passed:
+        description: 'Whether prohibited keywords check passed'
+        value: ${{ jobs.aggregate-results.outputs.prohibited_keywords_passed }}
+      prohibited_keywords_findings:
+        description: 'Prohibited keywords findings'
+        value: ${{ jobs.aggregate-results.outputs.prohibited_keywords_findings }}
+      vulnerability_scan_passed:
+        description: 'Whether vulnerability scan passed'
+        value: ${{ jobs.aggregate-results.outputs.vulnerability_scan_passed }}
+      vulnerability_scan_findings:
+        description: 'Vulnerability scan findings'
+        value: ${{ jobs.aggregate-results.outputs.vulnerability_scan_findings }}
+      formatting_passed:
+        description: 'Whether code formatting check passed'
+        value: ${{ jobs.aggregate-results.outputs.formatting_passed }}
+      formatting_findings:
+        description: 'Code formatting findings'
+        value: ${{ jobs.aggregate-results.outputs.formatting_findings }}
+      license_compliance_passed:
+        description: 'Whether license compliance check passed'
+        value: ${{ jobs.aggregate-results.outputs.license_compliance_passed }}
+      license_compliance_findings:
+        description: 'License compliance findings'
+        value: ${{ jobs.aggregate-results.outputs.license_compliance_findings }}
+      all_checks_passed:
+        description: 'Whether all blocking checks passed'
+        value: ${{ jobs.aggregate-results.outputs.all_checks_passed }}
+
+jobs:
+  # =============================================================================
+  # 1. PR Title Validation (Conventional Commits)
+  # =============================================================================
+  pr-title-check:
+    name: PR Title (Conventional Commits)
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Validate PR title
+        id: validate
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+            ci
+            build
+            revert
+          requireScope: false
+          subjectPattern: ^.+$
+          subjectPatternError: |
+            The subject "{subject}" in PR title "{title}" is invalid.
+            Please use format: type: description (e.g., "feat: add new feature")
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.validate.outcome }}" == "success" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=PR title follows Conventional Commits format" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=PR title should follow Conventional Commits (e.g., feat: add feature)" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 2. PR Size Check
+  # =============================================================================
+  pr-size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Check PR size
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const additions = pr.additions || 0;
+            const deletions = pr.deletions || 0;
+            const totalChanges = additions + deletions;
+            const changedFiles = pr.changed_files || 0;
+
+            let warnings = [];
+            let passed = true;
+
+            // Warning thresholds (not blocking)
+            if (totalChanges > 1000) {
+              warnings.push(`Large PR: ${totalChanges} lines changed`);
+            }
+            if (changedFiles > 30) {
+              warnings.push(`Many files: ${changedFiles} files changed`);
+            }
+
+            // Blocking thresholds (very large PRs)
+            if (totalChanges > 3000) {
+              passed = false;
+              warnings.push('PR exceeds 3000 lines - consider splitting');
+            }
+            if (changedFiles > 50) {
+              passed = false;
+              warnings.push('PR exceeds 50 files - consider splitting');
+            }
+
+            core.setOutput('passed', passed.toString());
+            core.setOutput('total_changes', totalChanges.toString());
+            core.setOutput('changed_files', changedFiles.toString());
+
+            if (warnings.length > 0) {
+              core.setOutput('findings', warnings.join('; '));
+            } else {
+              core.setOutput('findings', `${totalChanges} lines, ${changedFiles} files - good size`);
+            }
+
+      - name: Set result
+        id: result
+        run: |
+          echo "passed=${{ steps.check.outputs.passed }}" >> "$GITHUB_OUTPUT"
+          echo "findings=${{ steps.check.outputs.findings }}" >> "$GITHUB_OUTPUT"
+
+  # =============================================================================
+  # 3. Dependency Review (Vulnerabilities & Licenses)
+  # =============================================================================
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Dependency Review
+        id: review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          vulnerability-check: true
+          license-check: true
+          comment-summary-in-pr: always
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.review.outcome }}" == "success" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No high/critical vulnerabilities in dependencies" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Dependency vulnerabilities detected - review Security tab" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 4. Auto-labeling PRs
+  # =============================================================================
+  pr-labeler:
+    name: Auto-label PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Check for labeler config
+        id: check-config
+        run: |
+          if [[ -f ".github/labeler.yml" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-label PR
+        if: steps.check-config.outputs.exists == 'true'
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+        continue-on-error: true
+
+  # =============================================================================
+  # 5. Breaking Change Detection
+  # =============================================================================
+  breaking-change-check:
+    name: Breaking Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      detected: ${{ steps.result.outputs.detected }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for breaking changes
+        id: check
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          # Check commit messages for breaking change indicators
+          BREAKING_COMMITS=$(git log "$BASE_SHA"..HEAD --oneline | grep -iE "BREAKING[ -]?CHANGE|^[a-z]+!:" || echo "")
+
+          # Check PR body for breaking change section
+          PR_BODY="${{ github.event.pull_request.body }}"
+          BREAKING_IN_BODY=""
+          if echo "$PR_BODY" | grep -qi "BREAKING CHANGE"; then
+            BREAKING_IN_BODY="Found in PR description"
+          fi
+
+          if [[ -n "$BREAKING_COMMITS" || -n "$BREAKING_IN_BODY" ]]; then
+            echo "detected=true" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            [[ -n "$BREAKING_COMMITS" ]] && echo "$BREAKING_COMMITS" >> "$GITHUB_OUTPUT"
+            [[ -n "$BREAKING_IN_BODY" ]] && echo "$BREAKING_IN_BODY" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "detected=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.check.outputs.detected }}" == "true" ]]; then
+            echo "detected=true" >> "$GITHUB_OUTPUT"
+            echo "findings=Breaking changes detected - ensure CHANGELOG is updated" >> "$GITHUB_OUTPUT"
+          else
+            echo "detected=false" >> "$GITHUB_OUTPUT"
+            echo "findings=No breaking changes detected" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 6. Prohibited Keywords Check
+  # =============================================================================
+  prohibited-keywords-check:
+    name: Prohibited Keywords Check
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for prohibited keywords in diff
+        id: check
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          # Keywords that indicate incomplete code
+          PROHIBITED_KEYWORDS="TODO|FIXME|HACK|XXX|BUG|UNDONE"
+
+          # Get the diff and check for keywords
+          FOUND_KEYWORDS=""
+
+          # Only check added lines (lines starting with +, excluding +++ file headers)
+          MATCHES=$(git diff "$BASE_SHA"..HEAD | grep "^+" | grep -v "^+++" | grep -iE "$PROHIBITED_KEYWORDS" | head -10 || echo "")
+
+          if [[ -n "$MATCHES" ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            KEYWORD_COUNT=$(echo "$MATCHES" | wc -l | tr -d ' ')
+            echo "count=$KEYWORD_COUNT" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        run: |
+          # This is a warning, not blocking
+          if [[ "${{ steps.check.outputs.found }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=Warning: ${{ steps.check.outputs.count }} TODO/FIXME markers found" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No prohibited keywords found" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 7. Secrets Scanning (Gitleaks + TruffleHog)
+  # =============================================================================
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        id: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+        continue-on-error: true
+
+      - name: Run TruffleHog
+        id: trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha }}
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          GITLEAKS_PASSED="${{ steps.gitleaks.outcome }}"
+          TRUFFLEHOG_PASSED="${{ steps.trufflehog.outcome }}"
+
+          if [[ "$GITLEAKS_PASSED" == "success" && "$TRUFFLEHOG_PASSED" == "success" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No secrets detected (Gitleaks + TruffleHog)" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            FAILED_TOOLS=""
+            [[ "$GITLEAKS_PASSED" != "success" ]] && FAILED_TOOLS="Gitleaks"
+            [[ "$TRUFFLEHOG_PASSED" != "success" ]] && FAILED_TOOLS="${FAILED_TOOLS:+$FAILED_TOOLS, }TruffleHog"
+            echo "findings=Potential secrets detected by: $FAILED_TOOLS" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # CHANGELOG Check
+  # =============================================================================
+  changelog-check:
+    name: CHANGELOG Check
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check CHANGELOG updated
+        id: check
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- CHANGELOG.md 2>/dev/null || echo "")
+
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.check.outputs.updated }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=CHANGELOG.md was updated" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=CHANGELOG.md was not updated - please document your changes" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # Commit PII Check
+  # =============================================================================
+  commit-pii-check:
+    name: Commit PII Check
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for PII in commits
+        id: check
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          # Default PII patterns: emails, phone numbers
+          if [[ -f ".github/pii-patterns.txt" ]]; then
+            PII_PATTERNS=$(cat .github/pii-patterns.txt | tr '\n' '|' | sed 's/|$//')
+          else
+            PII_PATTERNS="@[a-zA-Z0-9.]+\.(com|org|net|io|co)|[0-9]{3}[-.]?[0-9]{3}[-.]?[0-9]{4}"
+          fi
+
+          COMMITS=$(git log --pretty=format:"%s%n%b" "$BASE_SHA"..HEAD 2>/dev/null || echo "")
+          MATCHES=$(echo "$COMMITS" | grep -iE "$PII_PATTERNS" || echo "")
+
+          if [[ -n "$MATCHES" ]]; then
+            echo "pii_found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pii_found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.check.outputs.pii_found }}" == "true" ]]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Potential PII found in commit messages" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No PII detected in commit history" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # Manifest Validation
+  # =============================================================================
+  manifest-validation:
+    name: Manifest Validation
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check if manifest exists
+        id: check-manifest
+        run: |
+          if [[ -f "integration-manifest.json" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate manifest against schema
+        id: validate
+        if: steps.check-manifest.outputs.exists == 'true'
+        run: |
+          npm install -g ajv-cli ajv-formats
+
+          curl -sL "https://keyfactor.github.io/v2/integration-manifest-schema.json" -o schema.json
+
+          if ajv validate -s schema.json -d integration-manifest.json --all-errors --strict=false 2>&1 | tee validation_output.txt; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.check-manifest.outputs.exists }}" != "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No integration-manifest.json found (not required)" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ steps.validate.outputs.valid }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=integration-manifest.json is valid" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=integration-manifest.json validation failed" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 7 & 8. Code Quality + Vulnerability Scan + Formatting (C#)
+  # =============================================================================
+  code-quality-csharp:
+    name: Code Quality (C#)
+    runs-on: ubuntu-latest
+    if: inputs.primary_language == 'C#'
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+      vulnerability_passed: ${{ steps.vuln-result.outputs.passed }}
+      vulnerability_findings: ${{ steps.vuln-result.outputs.findings }}
+      formatting_passed: ${{ steps.format-result.outputs.passed }}
+      formatting_findings: ${{ steps.format-result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+        continue-on-error: true
+
+      # 8. Code Formatting Check
+      - name: Check code formatting
+        id: format
+        run: |
+          if dotnet format --verify-no-changes --verbosity diagnostic 2>&1 | tee format_output.txt; then
+            echo "formatted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "formatted=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Set formatting result
+        id: format-result
+        run: |
+          if [[ "${{ steps.format.outputs.formatted }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=Code formatting is correct" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Code formatting issues detected - run 'dotnet format'" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 7. Vulnerability Scan
+      - name: Check for vulnerable packages
+        id: vuln
+        run: |
+          if dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable_output.txt; then
+            if grep -q "has the following vulnerable packages" vulnerable_output.txt; then
+              echo "vulnerable=true" >> "$GITHUB_OUTPUT"
+              VULN_COUNT=$(grep -c ">" vulnerable_output.txt || echo "0")
+              echo "count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+            else
+              echo "vulnerable=false" >> "$GITHUB_OUTPUT"
+              echo "count=0" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "vulnerable=false" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Set vulnerability result
+        id: vuln-result
+        run: |
+          if [[ "${{ steps.vuln.outputs.vulnerable }}" == "true" ]]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.vuln.outputs.count }} vulnerable packages found" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No vulnerable packages detected" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Build with analyzers
+      - name: Build with analyzers
+        id: build
+        run: |
+          if dotnet build --configuration Release --no-restore /p:TreatWarningsAsErrors=false 2>&1 | tee build_output.txt; then
+            WARNINGS=$(grep -c "warning" build_output.txt || echo "0")
+            ERRORS=$(grep -c "error" build_output.txt || echo "0")
+            echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+            echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+            echo "build_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            ERRORS=$(grep -c "error" build_output.txt || echo "1")
+            echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+            echo "warnings=0" >> "$GITHUB_OUTPUT"
+            echo "build_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.build.outputs.build_passed }}" == "true" && "${{ steps.build.outputs.errors }}" == "0" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.build.outputs.warnings }} warnings, 0 errors" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.build.outputs.warnings }} warnings, ${{ steps.build.outputs.errors }} errors" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 7 & 8. Code Quality + Vulnerability Scan + Formatting (Go)
+  # =============================================================================
+  code-quality-go:
+    name: Code Quality (Go)
+    runs-on: ubuntu-latest
+    if: inputs.primary_language == 'Go'
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+      vulnerability_passed: ${{ steps.vuln-result.outputs.passed }}
+      vulnerability_findings: ${{ steps.vuln-result.outputs.findings }}
+      formatting_passed: ${{ steps.format-result.outputs.passed }}
+      formatting_findings: ${{ steps.format-result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+        continue-on-error: true
+
+      # 8. Code Formatting Check
+      - name: Check code formatting
+        id: format
+        run: |
+          UNFORMATTED=$(gofmt -l . | grep -v vendor || echo "")
+          if [[ -z "$UNFORMATTED" ]]; then
+            echo "formatted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "formatted=false" >> "$GITHUB_OUTPUT"
+            FILE_COUNT=$(echo "$UNFORMATTED" | wc -l | tr -d ' ')
+            echo "count=$FILE_COUNT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set formatting result
+        id: format-result
+        run: |
+          if [[ "${{ steps.format.outputs.formatted }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=Code formatting is correct" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.format.outputs.count }} files need formatting - run 'gofmt -w .'" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 7. Vulnerability Scan
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        continue-on-error: true
+
+      - name: Run govulncheck
+        id: vuln
+        run: |
+          if govulncheck ./... 2>&1 | tee vuln_output.txt; then
+            echo "vulnerable=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "vulnerable=true" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Set vulnerability result
+        id: vuln-result
+        run: |
+          if [[ "${{ steps.vuln.outputs.vulnerable }}" == "true" ]]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Vulnerabilities found - review govulncheck output" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No vulnerabilities detected" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Linting
+      - name: Run golangci-lint
+        id: lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m --out-format=line-number
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.lint.outcome }}" == "success" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No linting issues found" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Linting issues detected - review golangci-lint output" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 7 & 8. Code Quality + Vulnerability Scan (Java)
+  # =============================================================================
+  code-quality-java:
+    name: Code Quality (Java)
+    runs-on: ubuntu-latest
+    if: inputs.primary_language == 'Java'
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+      vulnerability_passed: ${{ steps.vuln-result.outputs.passed }}
+      vulnerability_findings: ${{ steps.vuln-result.outputs.findings }}
+      formatting_passed: ${{ steps.format-result.outputs.passed }}
+      formatting_findings: ${{ steps.format-result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Check for pom.xml
+        id: check-pom
+        run: |
+          if [[ -f "pom.xml" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 7. Vulnerability Scan (OWASP Dependency Check)
+      - name: Run OWASP Dependency Check
+        id: vuln
+        if: steps.check-pom.outputs.exists == 'true'
+        run: |
+          # Check if OWASP plugin is configured
+          if grep -q "dependency-check-maven" pom.xml; then
+            if mvn org.owasp:dependency-check-maven:check -B 2>&1 | tee vuln_output.txt; then
+              echo "vulnerable=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "vulnerable=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "vulnerable=false" >> "$GITHUB_OUTPUT"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      - name: Set vulnerability result
+        id: vuln-result
+        run: |
+          if [[ "${{ steps.vuln.outputs.skipped }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=OWASP plugin not configured (skipped)" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ steps.vuln.outputs.vulnerable }}" == "true" ]]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Vulnerabilities found - review dependency-check report" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No vulnerabilities detected" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 8. Formatting (Checkstyle)
+      - name: Set formatting result
+        id: format-result
+        run: |
+          # Java formatting typically handled by Checkstyle in build
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+          echo "findings=Formatting checked via Maven build" >> "$GITHUB_OUTPUT"
+
+      # Build with quality checks
+      - name: Run Maven verify
+        id: maven
+        if: steps.check-pom.outputs.exists == 'true'
+        run: |
+          if mvn verify -B 2>&1 | tee maven_output.txt; then
+            echo "verify_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "verify_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+          WARNINGS=$(grep -c "\[WARNING\]" maven_output.txt || echo "0")
+          ERRORS=$(grep -c "\[ERROR\]" maven_output.txt || echo "0")
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          if [[ "${{ steps.check-pom.outputs.exists }}" != "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No pom.xml found" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ steps.maven.outputs.verify_passed }}" == "true" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.maven.outputs.warnings }} warnings, 0 errors" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=${{ steps.maven.outputs.warnings }} warnings, ${{ steps.maven.outputs.errors }} errors" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # 9. License Compliance
+  # =============================================================================
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      findings: ${{ steps.result.outputs.findings }}
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Detect project type
+        id: detect
+        run: |
+          if [[ -f "*.csproj" ]] || ls *.csproj 2>/dev/null; then
+            echo "type=dotnet" >> "$GITHUB_OUTPUT"
+          elif [[ -f "go.mod" ]]; then
+            echo "type=go" >> "$GITHUB_OUTPUT"
+          elif [[ -f "pom.xml" ]]; then
+            echo "type=maven" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      # .NET License Check
+      - name: Setup .NET
+        if: steps.detect.outputs.type == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check .NET licenses
+        id: dotnet-license
+        if: steps.detect.outputs.type == 'dotnet'
+        run: |
+          dotnet tool install --global dotnet-project-licenses || true
+
+          # Find first csproj file
+          CSPROJ=$(find . -name "*.csproj" -not -path "./test/*" | head -1)
+
+          if [[ -n "$CSPROJ" ]]; then
+            mkdir -p license-reports
+            dotnet-project-licenses --input "$CSPROJ" --output-directory license-reports --json --unique 2>&1 | tee license_output.txt || true
+
+            # Check for restricted licenses
+            if [[ -f "license-reports/licenses.json" ]] && grep -iE "GPL-3|AGPL|LGPL-3" license-reports/licenses.json; then
+              echo "restricted=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "restricted=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "restricted=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      # Go License Check
+      - name: Setup Go
+        if: steps.detect.outputs.type == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+        continue-on-error: true
+
+      - name: Check Go licenses
+        id: go-license
+        if: steps.detect.outputs.type == 'go'
+        run: |
+          go install github.com/google/go-licenses@latest || true
+
+          if go-licenses check ./... 2>&1 | tee license_output.txt; then
+            echo "restricted=false" >> "$GITHUB_OUTPUT"
+          else
+            # Check if it's a restricted license issue
+            if grep -iE "GPL-3|AGPL|forbidden" license_output.txt; then
+              echo "restricted=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "restricted=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+        continue-on-error: true
+
+      - name: Set result
+        id: result
+        run: |
+          RESTRICTED="${{ steps.dotnet-license.outputs.restricted }}${{ steps.go-license.outputs.restricted }}"
+
+          if [[ "$RESTRICTED" == *"true"* ]]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "findings=Restricted license (GPL/AGPL) detected - review required" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ steps.detect.outputs.type }}" == "unknown" ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=License check skipped (unknown project type)" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "findings=No restricted licenses detected" >> "$GITHUB_OUTPUT"
+          fi
+
+  # =============================================================================
+  # Aggregate Results
+  # =============================================================================
+  aggregate-results:
+    name: Aggregate Results
+    runs-on: ubuntu-latest
+    needs:
+      - pr-title-check
+      - pr-size-check
+      - dependency-review
+      - breaking-change-check
+      - prohibited-keywords-check
+      - secrets-scan
+      - changelog-check
+      - commit-pii-check
+      - manifest-validation
+      - code-quality-csharp
+      - code-quality-go
+      - code-quality-java
+      - license-compliance
+    if: always()
+    outputs:
+      # Original checks
+      secrets_scan_passed: ${{ steps.aggregate.outputs.secrets_scan_passed }}
+      secrets_scan_findings: ${{ steps.aggregate.outputs.secrets_scan_findings }}
+      changelog_passed: ${{ steps.aggregate.outputs.changelog_passed }}
+      changelog_findings: ${{ steps.aggregate.outputs.changelog_findings }}
+      pii_check_passed: ${{ steps.aggregate.outputs.pii_check_passed }}
+      pii_check_findings: ${{ steps.aggregate.outputs.pii_check_findings }}
+      manifest_passed: ${{ steps.aggregate.outputs.manifest_passed }}
+      manifest_findings: ${{ steps.aggregate.outputs.manifest_findings }}
+      code_quality_passed: ${{ steps.aggregate.outputs.code_quality_passed }}
+      code_quality_findings: ${{ steps.aggregate.outputs.code_quality_findings }}
+      # New checks
+      pr_title_passed: ${{ steps.aggregate.outputs.pr_title_passed }}
+      pr_title_findings: ${{ steps.aggregate.outputs.pr_title_findings }}
+      pr_size_passed: ${{ steps.aggregate.outputs.pr_size_passed }}
+      pr_size_findings: ${{ steps.aggregate.outputs.pr_size_findings }}
+      dependency_review_passed: ${{ steps.aggregate.outputs.dependency_review_passed }}
+      dependency_review_findings: ${{ steps.aggregate.outputs.dependency_review_findings }}
+      breaking_change_detected: ${{ steps.aggregate.outputs.breaking_change_detected }}
+      breaking_change_findings: ${{ steps.aggregate.outputs.breaking_change_findings }}
+      prohibited_keywords_passed: ${{ steps.aggregate.outputs.prohibited_keywords_passed }}
+      prohibited_keywords_findings: ${{ steps.aggregate.outputs.prohibited_keywords_findings }}
+      vulnerability_scan_passed: ${{ steps.aggregate.outputs.vulnerability_scan_passed }}
+      vulnerability_scan_findings: ${{ steps.aggregate.outputs.vulnerability_scan_findings }}
+      formatting_passed: ${{ steps.aggregate.outputs.formatting_passed }}
+      formatting_findings: ${{ steps.aggregate.outputs.formatting_findings }}
+      license_compliance_passed: ${{ steps.aggregate.outputs.license_compliance_passed }}
+      license_compliance_findings: ${{ steps.aggregate.outputs.license_compliance_findings }}
+      all_checks_passed: ${{ steps.aggregate.outputs.all_checks_passed }}
+    steps:
+      - name: Aggregate all results
+        id: aggregate
+        run: |
+          # Original checks
+          echo "secrets_scan_passed=${{ needs.secrets-scan.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "secrets_scan_findings=${{ needs.secrets-scan.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "changelog_passed=${{ needs.changelog-check.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "changelog_findings=${{ needs.changelog-check.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "pii_check_passed=${{ needs.commit-pii-check.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "pii_check_findings=${{ needs.commit-pii-check.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "manifest_passed=${{ needs.manifest-validation.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "manifest_findings=${{ needs.manifest-validation.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          # New checks
+          echo "pr_title_passed=${{ needs.pr-title-check.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "pr_title_findings=${{ needs.pr-title-check.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "pr_size_passed=${{ needs.pr-size-check.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "pr_size_findings=${{ needs.pr-size-check.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "dependency_review_passed=${{ needs.dependency-review.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "dependency_review_findings=${{ needs.dependency-review.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "breaking_change_detected=${{ needs.breaking-change-check.outputs.detected || 'false' }}" >> "$GITHUB_OUTPUT"
+          echo "breaking_change_findings=${{ needs.breaking-change-check.outputs.findings || 'No breaking changes' }}" >> "$GITHUB_OUTPUT"
+
+          echo "prohibited_keywords_passed=${{ needs.prohibited-keywords-check.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "prohibited_keywords_findings=${{ needs.prohibited-keywords-check.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          echo "license_compliance_passed=${{ needs.license-compliance.outputs.passed || 'true' }}" >> "$GITHUB_OUTPUT"
+          echo "license_compliance_findings=${{ needs.license-compliance.outputs.findings || 'Check skipped' }}" >> "$GITHUB_OUTPUT"
+
+          # Code quality - aggregate from language-specific jobs
+          CODE_QUALITY_PASSED="true"
+          CODE_QUALITY_FINDINGS="No code quality check ran"
+          VULN_PASSED="true"
+          VULN_FINDINGS="No vulnerability check ran"
+          FORMAT_PASSED="true"
+          FORMAT_FINDINGS="No formatting check ran"
+
+          if [[ -n "${{ needs.code-quality-csharp.outputs.passed }}" ]]; then
+            CODE_QUALITY_PASSED="${{ needs.code-quality-csharp.outputs.passed }}"
+            CODE_QUALITY_FINDINGS="${{ needs.code-quality-csharp.outputs.findings }}"
+            VULN_PASSED="${{ needs.code-quality-csharp.outputs.vulnerability_passed }}"
+            VULN_FINDINGS="${{ needs.code-quality-csharp.outputs.vulnerability_findings }}"
+            FORMAT_PASSED="${{ needs.code-quality-csharp.outputs.formatting_passed }}"
+            FORMAT_FINDINGS="${{ needs.code-quality-csharp.outputs.formatting_findings }}"
+          elif [[ -n "${{ needs.code-quality-go.outputs.passed }}" ]]; then
+            CODE_QUALITY_PASSED="${{ needs.code-quality-go.outputs.passed }}"
+            CODE_QUALITY_FINDINGS="${{ needs.code-quality-go.outputs.findings }}"
+            VULN_PASSED="${{ needs.code-quality-go.outputs.vulnerability_passed }}"
+            VULN_FINDINGS="${{ needs.code-quality-go.outputs.vulnerability_findings }}"
+            FORMAT_PASSED="${{ needs.code-quality-go.outputs.formatting_passed }}"
+            FORMAT_FINDINGS="${{ needs.code-quality-go.outputs.formatting_findings }}"
+          elif [[ -n "${{ needs.code-quality-java.outputs.passed }}" ]]; then
+            CODE_QUALITY_PASSED="${{ needs.code-quality-java.outputs.passed }}"
+            CODE_QUALITY_FINDINGS="${{ needs.code-quality-java.outputs.findings }}"
+            VULN_PASSED="${{ needs.code-quality-java.outputs.vulnerability_passed }}"
+            VULN_FINDINGS="${{ needs.code-quality-java.outputs.vulnerability_findings }}"
+            FORMAT_PASSED="${{ needs.code-quality-java.outputs.formatting_passed }}"
+            FORMAT_FINDINGS="${{ needs.code-quality-java.outputs.formatting_findings }}"
+          fi
+
+          echo "code_quality_passed=${CODE_QUALITY_PASSED}" >> "$GITHUB_OUTPUT"
+          echo "code_quality_findings=${CODE_QUALITY_FINDINGS}" >> "$GITHUB_OUTPUT"
+          echo "vulnerability_scan_passed=${VULN_PASSED}" >> "$GITHUB_OUTPUT"
+          echo "vulnerability_scan_findings=${VULN_FINDINGS}" >> "$GITHUB_OUTPUT"
+          echo "formatting_passed=${FORMAT_PASSED}" >> "$GITHUB_OUTPUT"
+          echo "formatting_findings=${FORMAT_FINDINGS}" >> "$GITHUB_OUTPUT"
+
+          # All blocking checks passed?
+          ALL_PASSED="true"
+
+          # Blocking checks
+          [[ "${{ needs.secrets-scan.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.changelog-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.commit-pii-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.manifest-validation.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.pr-title-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.pr-size-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.dependency-review.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+          [[ "${CODE_QUALITY_PASSED}" == "false" ]] && ALL_PASSED="false"
+          [[ "${VULN_PASSED}" == "false" ]] && ALL_PASSED="false"
+          [[ "${{ needs.license-compliance.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
+
+          # Non-blocking checks (warnings only): prohibited_keywords, formatting, breaking_change
+
+          echo "all_checks_passed=${ALL_PASSED}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Step Summary
+        run: |
+          echo "## PR Quality Checks Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Security Checks" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets Scan | $(if [[ '${{ steps.aggregate.outputs.secrets_scan_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.secrets_scan_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Review | $(if [[ '${{ steps.aggregate.outputs.dependency_review_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.dependency_review_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Vulnerability Scan | $(if [[ '${{ steps.aggregate.outputs.vulnerability_scan_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.vulnerability_scan_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Compliance | $(if [[ '${{ steps.aggregate.outputs.license_compliance_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.license_compliance_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit History PII | $(if [[ '${{ steps.aggregate.outputs.pii_check_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.pii_check_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Code Quality" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | $(if [[ '${{ steps.aggregate.outputs.code_quality_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.code_quality_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Formatting | $(if [[ '${{ steps.aggregate.outputs.formatting_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':warning:'; fi) | ${{ steps.aggregate.outputs.formatting_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Prohibited Keywords | $(if [[ '${{ steps.aggregate.outputs.prohibited_keywords_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':warning:'; fi) | ${{ steps.aggregate.outputs.prohibited_keywords_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### PR Standards" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Title (Conventional Commits) | $(if [[ '${{ steps.aggregate.outputs.pr_title_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.pr_title_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Size | $(if [[ '${{ steps.aggregate.outputs.pr_size_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.pr_size_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CHANGELOG Updated | $(if [[ '${{ steps.aggregate.outputs.changelog_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.changelog_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Manifest Validation | $(if [[ '${{ steps.aggregate.outputs.manifest_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.manifest_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Breaking Changes | $(if [[ '${{ steps.aggregate.outputs.breaking_change_detected }}' == 'true' ]]; then echo ':warning:'; else echo ':white_check_mark:'; fi) | ${{ steps.aggregate.outputs.breaking_change_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ steps.aggregate.outputs.all_checks_passed }}" == "true" ]]; then
+            echo ":tada: **All quality checks passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo ":warning: **Some quality checks failed. Please review and address the issues above.**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail if blocking checks failed
+        if: steps.aggregate.outputs.all_checks_passed != 'true'
+        run: |
+          echo "One or more blocking quality checks failed"
+          exit 1

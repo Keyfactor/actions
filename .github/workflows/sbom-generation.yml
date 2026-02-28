@@ -1,0 +1,168 @@
+name: SBOM Generation
+
+on:
+  workflow_call:
+    inputs:
+      primary_language:
+        description: 'Primary language of the repository (C#, Go, Java)'
+        required: false
+        type: string
+        default: ''
+      release_version:
+        description: 'Release version for SBOM naming'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      token:
+        description: 'GitHub token for uploads'
+        required: true
+
+jobs:
+  generate-sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: keyfactor/checkout@v4
+
+      - name: Detect project type
+        id: detect
+        run: |
+          if ls *.csproj 2>/dev/null || ls **/*.csproj 2>/dev/null; then
+            echo "type=dotnet" >> "$GITHUB_OUTPUT"
+          elif [[ -f "go.mod" ]]; then
+            echo "type=go" >> "$GITHUB_OUTPUT"
+          elif [[ -f "pom.xml" ]]; then
+            echo "type=maven" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      # .NET SBOM Generation
+      - name: Setup .NET
+        if: steps.detect.outputs.type == 'dotnet' || inputs.primary_language == 'C#'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate .NET SBOM (CycloneDX)
+        id: dotnet-sbom
+        if: steps.detect.outputs.type == 'dotnet' || inputs.primary_language == 'C#'
+        run: |
+          dotnet tool install --global CycloneDX || true
+
+          # Find solution or project file
+          if ls *.sln 2>/dev/null; then
+            TARGET=$(ls *.sln | head -1)
+          else
+            TARGET=$(find . -name "*.csproj" -not -path "./test/*" | head -1)
+          fi
+
+          if [[ -n "$TARGET" ]]; then
+            mkdir -p sbom-output
+            dotnet CycloneDX "$TARGET" -o sbom-output -f sbom -j || true
+            dotnet CycloneDX "$TARGET" -o sbom-output -f sbom || true
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      # Go SBOM Generation
+      - name: Setup Go
+        if: steps.detect.outputs.type == 'go' || inputs.primary_language == 'Go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+        continue-on-error: true
+
+      - name: Generate Go SBOM (CycloneDX)
+        id: go-sbom
+        if: steps.detect.outputs.type == 'go' || inputs.primary_language == 'Go'
+        run: |
+          go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest || true
+
+          mkdir -p sbom-output
+          cyclonedx-gomod mod -json -output sbom-output/sbom.json . || true
+          cyclonedx-gomod mod -output sbom-output/sbom.xml . || true
+          echo "generated=true" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      # Java SBOM Generation
+      - name: Setup Java
+        if: steps.detect.outputs.type == 'maven' || inputs.primary_language == 'Java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Generate Java SBOM (CycloneDX Maven Plugin)
+        id: java-sbom
+        if: steps.detect.outputs.type == 'maven' || inputs.primary_language == 'Java'
+        run: |
+          mkdir -p sbom-output
+
+          # Use CycloneDX Maven plugin
+          mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom -B || true
+
+          # Copy generated SBOM
+          if [[ -f "target/bom.json" ]]; then
+            cp target/bom.json sbom-output/sbom.json
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          elif [[ -f "target/bom.xml" ]]; then
+            cp target/bom.xml sbom-output/sbom.xml
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      # Syft fallback for any project type
+      - name: Generate SBOM with Syft (fallback)
+        id: syft-sbom
+        if: steps.dotnet-sbom.outputs.generated != 'true' && steps.go-sbom.outputs.generated != 'true' && steps.java-sbom.outputs.generated != 'true'
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: sbom-output/sbom.json
+        continue-on-error: true
+
+      - name: Rename SBOM with version
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          if [[ -z "$VERSION" ]]; then
+            VERSION="latest"
+          fi
+
+          mkdir -p sbom-final
+          if [[ -f "sbom-output/sbom.json" ]]; then
+            cp sbom-output/sbom.json "sbom-final/sbom-${VERSION}.json"
+          fi
+          if [[ -f "sbom-output/sbom.xml" ]]; then
+            cp sbom-output/sbom.xml "sbom-final/sbom-${VERSION}.xml"
+          fi
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom-final/
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Add SBOM to Step Summary
+        run: |
+          echo "## Software Bill of Materials (SBOM)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ -f "sbom-final/sbom-${{ inputs.release_version || 'latest' }}.json" ]]; then
+            echo ":white_check_mark: SBOM generated successfully (CycloneDX format)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download the SBOM artifact from this workflow run." >> $GITHUB_STEP_SUMMARY
+          else
+            echo ":warning: SBOM generation may have failed or no dependencies found." >> $GITHUB_STEP_SUMMARY
+          fi

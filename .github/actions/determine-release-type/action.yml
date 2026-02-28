@@ -1,0 +1,189 @@
+name: 'Determine Release Type'
+description: 'Determines the release type based on event context (PR state, branch, etc.)'
+
+outputs:
+  # Release type flags
+  is_full_release:
+    description: 'True if this is a full release (merged PR to release branch)'
+    value: ${{ steps.determine.outputs.is_full_release }}
+  is_pre_release:
+    description: 'True if this is a pre-release (open PR to release branch)'
+    value: ${{ steps.determine.outputs.is_pre_release }}
+  is_release_branch:
+    description: 'True if PR targets a release-* branch'
+    value: ${{ steps.determine.outputs.is_release_branch }}
+  is_hotfix:
+    description: 'True if this is a hotfix release'
+    value: ${{ steps.determine.outputs.is_hotfix }}
+
+  # Version information
+  base_version:
+    description: 'Base version from release branch (e.g., 1.2 from release-1.2)'
+    value: ${{ steps.determine.outputs.base_version }}
+  latest_tag:
+    description: 'Latest existing tag for this release branch'
+    value: ${{ steps.determine.outputs.latest_tag }}
+  next_version:
+    description: 'Computed next version'
+    value: ${{ steps.compute-version.outputs.next_version }}
+  increment_level:
+    description: 'Semver increment level (patch, prerelease)'
+    value: ${{ steps.determine.outputs.increment_level }}
+
+  # Event context
+  event_type:
+    description: 'The GitHub event type'
+    value: ${{ steps.context.outputs.event_type }}
+  pr_state:
+    description: 'PR state (open, closed)'
+    value: ${{ steps.context.outputs.pr_state }}
+  pr_merged:
+    description: 'Whether the PR was merged'
+    value: ${{ steps.context.outputs.pr_merged }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract event context
+      id: context
+      shell: bash
+      run: |
+        echo "event_type=${{ github.event_name }}" >> "$GITHUB_OUTPUT"
+
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "pr_state=${{ github.event.pull_request.state }}" >> "$GITHUB_OUTPUT"
+          echo "pr_merged=${{ github.event.pull_request.merged }}" >> "$GITHUB_OUTPUT"
+          echo "pr_base_ref=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+          echo "pr_head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          echo "pr_merge_sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Determine release type
+      id: determine
+      shell: bash
+      run: |
+        EVENT="${{ github.event_name }}"
+        PR_STATE="${{ steps.context.outputs.pr_state }}"
+        PR_MERGED="${{ steps.context.outputs.pr_merged }}"
+        PR_BASE_REF="${{ steps.context.outputs.pr_base_ref }}"
+
+        # Default values
+        IS_FULL_RELEASE="false"
+        IS_PRE_RELEASE="false"
+        IS_RELEASE_BRANCH="false"
+        IS_HOTFIX="false"
+        INCREMENT_LEVEL=""
+        BASE_VERSION=""
+
+        if [[ "$EVENT" == "pull_request" ]]; then
+          # Check if targeting release branch
+          if [[ "$PR_BASE_REF" == release-* ]]; then
+            IS_RELEASE_BRANCH="true"
+            BASE_VERSION="${PR_BASE_REF#release-}"
+
+            # Determine if full release (merged) or pre-release (open)
+            if [[ "$PR_STATE" == "closed" && "$PR_MERGED" == "true" ]]; then
+              IS_FULL_RELEASE="true"
+              INCREMENT_LEVEL="patch"
+            elif [[ "$PR_STATE" == "open" ]]; then
+              IS_PRE_RELEASE="true"
+              INCREMENT_LEVEL="prerelease"
+            fi
+          fi
+        fi
+
+        # Output all values
+        echo "is_full_release=$IS_FULL_RELEASE" >> "$GITHUB_OUTPUT"
+        echo "is_pre_release=$IS_PRE_RELEASE" >> "$GITHUB_OUTPUT"
+        echo "is_release_branch=$IS_RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
+        echo "is_hotfix=$IS_HOTFIX" >> "$GITHUB_OUTPUT"
+        echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "increment_level=$INCREMENT_LEVEL" >> "$GITHUB_OUTPUT"
+
+        # Summary
+        echo "### Release Type Determination" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Event:** $EVENT" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Release Branch:** $IS_RELEASE_BRANCH" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Full Release:** $IS_FULL_RELEASE" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Pre-Release:** $IS_PRE_RELEASE" >> "$GITHUB_STEP_SUMMARY"
+        [[ -n "$BASE_VERSION" ]] && echo "- **Base Version:** $BASE_VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Find latest tag
+      id: find-tag
+      if: steps.determine.outputs.is_release_branch == 'true'
+      shell: bash
+      run: |
+        BASE_VERSION="${{ steps.determine.outputs.base_version }}"
+
+        git fetch --tags
+
+        if [[ -n "$(git tag)" ]]; then
+          # Find tags matching this release branch
+          BRANCH_TAGS=$(git tag --sort=-v:refname | grep "^$BASE_VERSION" || echo "")
+
+          if [[ -n "$BRANCH_TAGS" ]]; then
+            # Get the latest tag base (without prerelease suffix)
+            TAG_BASE=$(echo "$BRANCH_TAGS" | grep -o '^[0-9.]*' | head -1)
+
+            # Check if there's a final release or only prereleases
+            FINAL_TAG=$(echo "$BRANCH_TAGS" | grep "^${TAG_BASE}$" | head -1 || echo "")
+
+            if [[ -n "$FINAL_TAG" ]]; then
+              LATEST_TAG="$FINAL_TAG"
+            else
+              LATEST_TAG=$(echo "$BRANCH_TAGS" | head -1)
+            fi
+
+            echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+
+            # Determine if hotfix
+            ALL_TAGS_BASE=$(git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -1)
+            if [[ "$ALL_TAGS_BASE" != *"$TAG_BASE"* ]]; then
+              echo "is_hotfix=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "latest_tag=" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "latest_tag=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Compute next version
+      id: compute-version
+      if: steps.determine.outputs.is_release_branch == 'true'
+      shell: bash
+      run: |
+        LATEST_TAG="${{ steps.find-tag.outputs.latest_tag }}"
+        BASE_VERSION="${{ steps.determine.outputs.base_version }}"
+        INCREMENT="${{ steps.determine.outputs.increment_level }}"
+
+        if [[ -z "$LATEST_TAG" ]]; then
+          # Initial release
+          NEXT_VERSION="${BASE_VERSION}.0"
+          if [[ "$INCREMENT" == "prerelease" ]]; then
+            NEXT_VERSION="${NEXT_VERSION}-rc.0"
+          fi
+        else
+          # Increment existing version
+          # This is simplified - real implementation would use semver library
+          if [[ "$INCREMENT" == "prerelease" ]]; then
+            if [[ "$LATEST_TAG" == *"-rc."* ]]; then
+              # Increment RC number
+              RC_NUM=$(echo "$LATEST_TAG" | grep -oP '(?<=-rc\.)\d+')
+              NEW_RC=$((RC_NUM + 1))
+              NEXT_VERSION=$(echo "$LATEST_TAG" | sed "s/-rc\.[0-9]*/-rc.$NEW_RC/")
+            else
+              # New prerelease
+              NEXT_VERSION="${LATEST_TAG}-rc.0"
+            fi
+          else
+            # Patch increment (remove prerelease suffix if present)
+            BASE=$(echo "$LATEST_TAG" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+')
+            PATCH=$(echo "$BASE" | cut -d. -f3)
+            NEW_PATCH=$((PATCH + 1))
+            NEXT_VERSION=$(echo "$BASE" | sed "s/\.[0-9]*$/.$NEW_PATCH/")
+          fi
+        fi
+
+        echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+        echo "- **Next Version:** $NEXT_VERSION" >> "$GITHUB_STEP_SUMMARY"

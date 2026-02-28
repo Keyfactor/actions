@@ -1,0 +1,86 @@
+# PR Auto-Labeling Configuration
+# Copy this file to your repository as .github/labeler.yml
+# Used by the PR Quality Checks workflow for automatic PR labeling
+
+# Documentation changes
+'documentation':
+  - changed-files:
+    - any-glob-to-any-file: ['*.md', 'docs/**/*', 'docsource/**/*', 'README*']
+
+# Dependency updates
+'dependencies':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/packages.lock.json'
+      - '**/*.csproj'
+      - '**/Directory.Build.props'
+      - '**/Directory.Packages.props'
+      - 'go.mod'
+      - 'go.sum'
+      - 'pom.xml'
+      - 'package.json'
+      - 'package-lock.json'
+
+# CI/CD changes
+'ci/cd':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - 'Makefile'
+      - '*.yml'
+      - '*.yaml'
+      - 'Dockerfile*'
+      - 'docker-compose*'
+      - '.goreleaser*'
+
+# Security-related changes
+'security':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/security/**/*'
+      - '**/auth/**/*'
+      - '**/crypto/**/*'
+      - '**/*secret*'
+      - '**/*credential*'
+
+# Test changes
+'tests':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*Test*.cs'
+      - '**/*Tests*.cs'
+      - '**/*_test.go'
+      - '**/test/**/*'
+      - '**/tests/**/*'
+      - '**/TestConsole/**/*'
+
+# Configuration changes
+'configuration':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'integration-manifest.json'
+      - 'appsettings*.json'
+      - '**/*.config'
+      - '**/*.conf'
+
+# Bug fixes (by branch name)
+'bug-fix':
+  - head-branch: ['^fix/', '^bugfix/', '^hotfix/']
+
+# New features (by branch name)
+'feature':
+  - head-branch: ['^feature/', '^feat/']
+
+# Breaking changes (by PR body content)
+'breaking-change':
+  - body-contains: ['BREAKING CHANGE', 'breaking change', 'breaking-change']
+
+# Needs careful review (core logic changes)
+# Customize these paths for your repository
+'needs-review':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Jobs/**/*'
+      - '**/Clients/**/*'
+      - '**/Core/**/*'
+      - '**/Services/**/*'

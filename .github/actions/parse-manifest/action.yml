@@ -1,0 +1,104 @@
+name: 'Parse Integration Manifest'
+description: 'Parses integration-manifest.json and extracts configuration values'
+
+inputs:
+  manifest_path:
+    description: 'Path to integration-manifest.json'
+    required: false
+    default: 'integration-manifest.json'
+
+outputs:
+  # Build configuration
+  release_dir:
+    description: 'Directory containing release artifacts'
+    value: ${{ steps.parse.outputs.release_dir }}
+  release_project:
+    description: 'Project file to build for release'
+    value: ${{ steps.parse.outputs.release_project }}
+  integration_type:
+    description: 'Type of integration (orchestrator, gateway, etc.)'
+    value: ${{ steps.parse.outputs.integration_type }}
+
+  # Catalog configuration
+  update_catalog:
+    description: 'Whether to update the integration catalog'
+    value: ${{ steps.parse.outputs.update_catalog }}
+
+  # Platform matrix
+  platform_matrix:
+    description: 'JSON array of target platforms'
+    value: ${{ steps.parse.outputs.platform_matrix }}
+
+  # Metadata
+  name:
+    description: 'Integration name'
+    value: ${{ steps.parse.outputs.name }}
+  description:
+    description: 'Integration description'
+    value: ${{ steps.parse.outputs.description }}
+  status:
+    description: 'Integration status (production, pilot, etc.)'
+    value: ${{ steps.parse.outputs.status }}
+
+  # Flags
+  manifest_exists:
+    description: 'Whether the manifest file exists'
+    value: ${{ steps.check.outputs.exists }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if manifest exists
+      id: check
+      shell: bash
+      run: |
+        if [[ -f "${{ inputs.manifest_path }}" ]]; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::integration-manifest.json not found"
+        fi
+
+    - name: Parse manifest
+      id: parse
+      if: steps.check.outputs.exists == 'true'
+      shell: bash
+      run: |
+        MANIFEST="${{ inputs.manifest_path }}"
+
+        # Build configuration
+        echo "release_dir=$(jq -r '.about.release_dir // "."' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        echo "release_project=$(jq -r '.about.release_project // ""' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        echo "integration_type=$(jq -r '.integration_type // "unknown"' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+
+        # Catalog configuration
+        UPDATE_CATALOG=$(jq -r '.update_catalog // true' "$MANIFEST")
+        echo "update_catalog=$UPDATE_CATALOG" >> "$GITHUB_OUTPUT"
+
+        # Platform matrix (as JSON array)
+        PLATFORMS=$(jq -c '.platform_matrix // []' "$MANIFEST")
+        echo "platform_matrix=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
+        # Metadata
+        echo "name=$(jq -r '.name // ""' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        echo "description=$(jq -r '.description // ""' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        echo "status=$(jq -r '.status // "unknown"' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+
+        # Summary
+        echo "### Integration Manifest" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Name:** $(jq -r '.name // "N/A"' "$MANIFEST")" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Type:** $(jq -r '.integration_type // "N/A"' "$MANIFEST")" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Status:** $(jq -r '.status // "N/A"' "$MANIFEST")" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Set defaults if no manifest
+      if: steps.check.outputs.exists != 'true'
+      shell: bash
+      run: |
+        echo "release_dir=." >> "$GITHUB_OUTPUT"
+        echo "release_project=" >> "$GITHUB_OUTPUT"
+        echo "integration_type=unknown" >> "$GITHUB_OUTPUT"
+        echo "update_catalog=false" >> "$GITHUB_OUTPUT"
+        echo "platform_matrix=[]" >> "$GITHUB_OUTPUT"
+        echo "name=" >> "$GITHUB_OUTPUT"
+        echo "description=" >> "$GITHUB_OUTPUT"
+        echo "status=unknown" >> "$GITHUB_OUTPUT"

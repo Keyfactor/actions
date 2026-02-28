@@ -1,6 +1,12 @@
 name: Create GitHub release version and location
 on:
   workflow_call:
+    inputs:
+      primary_language:
+        description: 'Primary language of the repository for code quality checks'
+        required: false
+        type: string
+        default: ''
     outputs:
       release_version:
         description: The computed release version for the release (or pre-release) being built
@@ -14,13 +20,101 @@ on:
       PR_BASE_TAG:
         description: major.min version
         value: ${{ jobs.create-github-release-workflow.outputs.PR_BASE_TAG }}
+      quality_checks_passed:
+        description: Whether all PR quality checks passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.all_checks_passed }}
+      secrets_scan_passed:
+        description: Whether secrets scan passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.secrets_scan_passed }}
+      secrets_scan_findings:
+        description: Secrets scan findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.secrets_scan_findings }}
+      changelog_passed:
+        description: Whether changelog was updated
+        value: ${{ jobs.call-pr-quality-checks.outputs.changelog_passed }}
+      changelog_findings:
+        description: Changelog check findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.changelog_findings }}
+      pii_check_passed:
+        description: Whether PII check passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.pii_check_passed }}
+      pii_check_findings:
+        description: PII check findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.pii_check_findings }}
+      manifest_passed:
+        description: Whether manifest validation passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.manifest_passed }}
+      manifest_findings:
+        description: Manifest validation findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.manifest_findings }}
+      code_quality_passed:
+        description: Whether code quality check passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.code_quality_passed }}
+      code_quality_findings:
+        description: Code quality findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.code_quality_findings }}
+      # New v6 outputs
+      pr_title_passed:
+        description: Whether PR title follows Conventional Commits
+        value: ${{ jobs.call-pr-quality-checks.outputs.pr_title_passed }}
+      pr_title_findings:
+        description: PR title validation findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.pr_title_findings }}
+      pr_size_passed:
+        description: Whether PR size is acceptable
+        value: ${{ jobs.call-pr-quality-checks.outputs.pr_size_passed }}
+      pr_size_findings:
+        description: PR size findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.pr_size_findings }}
+      dependency_review_passed:
+        description: Whether dependency review passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.dependency_review_passed }}
+      dependency_review_findings:
+        description: Dependency review findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.dependency_review_findings }}
+      breaking_change_detected:
+        description: Whether breaking changes were detected
+        value: ${{ jobs.call-pr-quality-checks.outputs.breaking_change_detected }}
+      breaking_change_findings:
+        description: Breaking change findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.breaking_change_findings }}
+      prohibited_keywords_passed:
+        description: Whether prohibited keywords check passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.prohibited_keywords_passed }}
+      prohibited_keywords_findings:
+        description: Prohibited keywords findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.prohibited_keywords_findings }}
+      vulnerability_scan_passed:
+        description: Whether vulnerability scan passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.vulnerability_scan_passed }}
+      vulnerability_scan_findings:
+        description: Vulnerability scan findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.vulnerability_scan_findings }}
+      formatting_passed:
+        description: Whether code formatting check passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.formatting_passed }}
+      formatting_findings:
+        description: Code formatting findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.formatting_findings }}
+      license_compliance_passed:
+        description: Whether license compliance check passed
+        value: ${{ jobs.call-pr-quality-checks.outputs.license_compliance_passed }}
+      license_compliance_findings:
+        description: License compliance findings
+        value: ${{ jobs.call-pr-quality-checks.outputs.license_compliance_findings }}
   pull_request:
     types: [opened, closed, edited, synchronize]
   push:
 
 jobs:
   call-check-file-action:
-    uses: keyfactor/actions/.github/workflows/check-todos-license-headers.yml@v4
+    uses: keyfactor/actions/.github/workflows/check-todos-license-headers.yml@v6
+
+  call-pr-quality-checks:
+    if: github.event_name == 'pull_request'
+    uses: keyfactor/actions/.github/workflows/pr-quality-checks.yml@v6
+    with:
+      primary_language: ${{ inputs.primary_language }}
 
   create-github-release-workflow:
     runs-on: ubuntu-latest
@@ -39,7 +133,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: keyfactor/checkout@v4
+        uses: keyfactor/checkout@v6
 
       - name: Display base.ref from Pull Request
         if: github.event_name == 'pull_request'

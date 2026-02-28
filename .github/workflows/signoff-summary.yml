@@ -1,0 +1,247 @@
+name: Signoff Summary
+
+on:
+  workflow_call:
+    inputs:
+      # Original checks
+      secrets_scan_passed:
+        description: 'Whether secrets scan passed'
+        required: true
+        type: string
+      secrets_scan_findings:
+        description: 'Secrets scan findings'
+        required: true
+        type: string
+      changelog_passed:
+        description: 'Whether changelog was updated'
+        required: true
+        type: string
+      changelog_findings:
+        description: 'Changelog check findings'
+        required: true
+        type: string
+      pii_check_passed:
+        description: 'Whether PII check passed'
+        required: true
+        type: string
+      pii_check_findings:
+        description: 'PII check findings'
+        required: true
+        type: string
+      manifest_passed:
+        description: 'Whether manifest validation passed'
+        required: true
+        type: string
+      manifest_findings:
+        description: 'Manifest validation findings'
+        required: true
+        type: string
+      code_quality_passed:
+        description: 'Whether code quality check passed'
+        required: true
+        type: string
+      code_quality_findings:
+        description: 'Code quality findings'
+        required: true
+        type: string
+      all_checks_passed:
+        description: 'Whether all blocking checks passed'
+        required: true
+        type: string
+      # New v6 checks
+      pr_title_passed:
+        description: 'Whether PR title follows Conventional Commits'
+        required: false
+        type: string
+        default: 'true'
+      pr_title_findings:
+        description: 'PR title validation findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      pr_size_passed:
+        description: 'Whether PR size is acceptable'
+        required: false
+        type: string
+        default: 'true'
+      pr_size_findings:
+        description: 'PR size findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      dependency_review_passed:
+        description: 'Whether dependency review passed'
+        required: false
+        type: string
+        default: 'true'
+      dependency_review_findings:
+        description: 'Dependency review findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      breaking_change_detected:
+        description: 'Whether breaking changes were detected'
+        required: false
+        type: string
+        default: 'false'
+      breaking_change_findings:
+        description: 'Breaking change findings'
+        required: false
+        type: string
+        default: 'No breaking changes'
+      prohibited_keywords_passed:
+        description: 'Whether prohibited keywords check passed'
+        required: false
+        type: string
+        default: 'true'
+      prohibited_keywords_findings:
+        description: 'Prohibited keywords findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      vulnerability_scan_passed:
+        description: 'Whether vulnerability scan passed'
+        required: false
+        type: string
+        default: 'true'
+      vulnerability_scan_findings:
+        description: 'Vulnerability scan findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      formatting_passed:
+        description: 'Whether code formatting check passed'
+        required: false
+        type: string
+        default: 'true'
+      formatting_findings:
+        description: 'Code formatting findings'
+        required: false
+        type: string
+        default: 'Not checked'
+      license_compliance_passed:
+        description: 'Whether license compliance check passed'
+        required: false
+        type: string
+        default: 'true'
+      license_compliance_findings:
+        description: 'License compliance findings'
+        required: false
+        type: string
+        default: 'Not checked'
+
+jobs:
+  generate-summary:
+    name: Generate Signoff Summary
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Generate PR Comment
+        uses: peter-evans/create-or-update-comment@v4
+        if: github.event_name == 'pull_request'
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## PR Quality Signoff Summary
+
+            ### Security Checks
+            | Check | Status | Details |
+            |-------|--------|---------|
+            | Secrets Scan | ${{ inputs.secrets_scan_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.secrets_scan_findings }} |
+            | Dependency Review | ${{ inputs.dependency_review_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.dependency_review_findings }} |
+            | Vulnerability Scan | ${{ inputs.vulnerability_scan_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.vulnerability_scan_findings }} |
+            | License Compliance | ${{ inputs.license_compliance_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.license_compliance_findings }} |
+            | Commit PII Check | ${{ inputs.pii_check_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pii_check_findings }} |
+
+            ### Code Quality
+            | Check | Status | Details |
+            |-------|--------|---------|
+            | Code Quality | ${{ inputs.code_quality_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.code_quality_findings }} |
+            | Code Formatting | ${{ inputs.formatting_passed == 'true' && ':white_check_mark:' || ':warning:' }} | ${{ inputs.formatting_findings }} |
+            | Prohibited Keywords | ${{ inputs.prohibited_keywords_passed == 'true' && ':white_check_mark:' || ':warning:' }} | ${{ inputs.prohibited_keywords_findings }} |
+
+            ### PR Standards
+            | Check | Status | Details |
+            |-------|--------|---------|
+            | PR Title | ${{ inputs.pr_title_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pr_title_findings }} |
+            | PR Size | ${{ inputs.pr_size_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pr_size_findings }} |
+            | CHANGELOG Updated | ${{ inputs.changelog_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.changelog_findings }} |
+            | Manifest Validation | ${{ inputs.manifest_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.manifest_findings }} |
+            | Breaking Changes | ${{ inputs.breaking_change_detected == 'true' && ':warning:' || ':white_check_mark:' }} | ${{ inputs.breaking_change_findings }} |
+
+            ---
+
+            ### Self-Review Checklist
+
+            Before requesting review, please confirm:
+
+            - [ ] I have reviewed my own code
+            - [ ] No secrets are being logged
+            - [ ] CHANGELOG.md has been updated (if applicable)
+            - [ ] Commit history contains no PII or customer names
+            - [ ] Documentation has been updated (if applicable)
+            - [ ] Tests have been added/updated for new functionality
+
+            ---
+
+            ### DevOps Workflow Reminders
+
+            - [ ] DevOps epic created (pattern: `<integration_name> vX.Y.Z`)
+            - [ ] Bug fixes and features attached to epic
+            - [ ] Target Version field filled out
+            - [ ] PR link attached to epic
+            - [ ] Description filled out (changelog entry is sufficient)
+            - [ ] "Waiting SignOff" tag set (required for signoff)
+
+            ---
+
+            ${{ inputs.all_checks_passed == 'true' && ':tada: **All automated quality checks passed!**' || ':warning: **Some quality checks failed. Please address the issues above before merging.**' }}
+
+            <sub>Generated by [Keyfactor Actions](https://github.com/Keyfactor/actions) v6 PR Quality Checks</sub>
+          reactions: ${{ inputs.all_checks_passed == 'true' && '+1' || '-1' }}
+
+      - name: Generate Step Summary
+        run: |
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## PR Quality Signoff Summary
+
+          ### Security Checks
+          | Check | Status | Details |
+          |-------|--------|---------|
+          | Secrets Scan | ${{ inputs.secrets_scan_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.secrets_scan_findings }} |
+          | Dependency Review | ${{ inputs.dependency_review_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.dependency_review_findings }} |
+          | Vulnerability Scan | ${{ inputs.vulnerability_scan_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.vulnerability_scan_findings }} |
+          | License Compliance | ${{ inputs.license_compliance_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.license_compliance_findings }} |
+          | Commit PII Check | ${{ inputs.pii_check_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pii_check_findings }} |
+
+          ### Code Quality
+          | Check | Status | Details |
+          |-------|--------|---------|
+          | Code Quality | ${{ inputs.code_quality_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.code_quality_findings }} |
+          | Code Formatting | ${{ inputs.formatting_passed == 'true' && ':white_check_mark:' || ':warning:' }} | ${{ inputs.formatting_findings }} |
+          | Prohibited Keywords | ${{ inputs.prohibited_keywords_passed == 'true' && ':white_check_mark:' || ':warning:' }} | ${{ inputs.prohibited_keywords_findings }} |
+
+          ### PR Standards
+          | Check | Status | Details |
+          |-------|--------|---------|
+          | PR Title | ${{ inputs.pr_title_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pr_title_findings }} |
+          | PR Size | ${{ inputs.pr_size_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.pr_size_findings }} |
+          | CHANGELOG Updated | ${{ inputs.changelog_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.changelog_findings }} |
+          | Manifest Validation | ${{ inputs.manifest_passed == 'true' && ':white_check_mark:' || ':x:' }} | ${{ inputs.manifest_findings }} |
+          | Breaking Changes | ${{ inputs.breaking_change_detected == 'true' && ':warning:' || ':white_check_mark:' }} | ${{ inputs.breaking_change_findings }} |
+
+          ---
+
+          ### Self-Review Checklist
+
+          - [ ] I have reviewed my own code
+          - [ ] No secrets are being logged
+          - [ ] CHANGELOG.md has been updated (if applicable)
+          - [ ] Commit history contains no PII or customer names
+          - [ ] Documentation has been updated (if applicable)
+
+          ---
+
+          ${{ inputs.all_checks_passed == 'true' && ':tada: **All automated quality checks passed!**' || ':warning: **Some quality checks failed. Please address the issues above before merging.**' }}
+          EOF
