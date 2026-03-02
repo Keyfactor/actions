@@ -335,7 +335,7 @@ jobs:
           echo "Email body generated"
 
       - name: Send email notification
-        if: steps.recipients.outputs.has_recipients == 'true' && secrets.smtp_server != ''
+        if: steps.recipients.outputs.has_recipients == 'true'
         uses: dawidd6/action-send-mail@v3
         continue-on-error: true
         with:
