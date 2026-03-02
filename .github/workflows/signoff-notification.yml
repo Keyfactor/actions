@@ -337,6 +337,7 @@ jobs:
       - name: Send email notification
         if: steps.recipients.outputs.has_recipients == 'true' && secrets.smtp_server != ''
         uses: dawidd6/action-send-mail@v3
+        continue-on-error: true
         with:
           server_address: ${{ secrets.smtp_server }}
           server_port: ${{ secrets.smtp_port || 587 }}

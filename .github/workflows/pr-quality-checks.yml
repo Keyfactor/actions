@@ -582,13 +582,16 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Authenticate NuGet with Keyfactor GitHub Packages
-        if: secrets.token != ''
+        env:
+          NUGET_TOKEN: ${{ secrets.token }}
         run: |
-          dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
-            --name keyfactor-github \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.token }} \
-            --store-password-in-clear-text 2>/dev/null || true
+          if [[ -n "$NUGET_TOKEN" ]]; then
+            dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
+              --name keyfactor-github \
+              --username ${{ github.actor }} \
+              --password "$NUGET_TOKEN" \
+              --store-password-in-clear-text 2>/dev/null || true
+          fi
 
       - name: Restore dependencies
         run: dotnet restore
@@ -997,13 +1000,16 @@ jobs:
             8.0.x
 
       - name: Authenticate NuGet with Keyfactor GitHub Packages
-        if: secrets.token != ''
+        env:
+          NUGET_TOKEN: ${{ secrets.token }}
         run: |
-          dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
-            --name keyfactor-github \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.token }} \
-            --store-password-in-clear-text 2>/dev/null || true
+          if [[ -n "$NUGET_TOKEN" ]]; then
+            dotnet nuget add source "https://nuget.pkg.github.com/Keyfactor/index.json" \
+              --name keyfactor-github \
+              --username ${{ github.actor }} \
+              --password "$NUGET_TOKEN" \
+              --store-password-in-clear-text 2>/dev/null || true
+          fi
 
       - name: Restore dependencies
         run: dotnet restore
