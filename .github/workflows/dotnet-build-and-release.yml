@@ -74,6 +74,8 @@ jobs:
               $projectDir = (Get-Item $releaseProject).DirectoryName
               $releaseDir = Join-Path $projectDir "bin\Release"
               echo "Auto-detected release_dir: $releaseDir"
+            } else {
+              $releaseDir = Join-Path "${{ github.workspace }}" $releaseDir
             }
             echo "RELEASE_DIR=$releaseDir" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
