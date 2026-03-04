@@ -94,10 +94,19 @@ jobs:
           MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
       
       - name: Read Target Frameworks
-        id: read_target_frameworks  
+        id: read_target_frameworks
         shell: pwsh
         run: |
-          [xml]$csproj = Get-Content "${{ inputs.release_project }}"
+          $releaseProject = "${{ inputs.release_project }}".Trim()
+          if ([string]::IsNullOrEmpty($releaseProject)) {
+            $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse | Where-Object { $_.FullName -notmatch '\.Tests\b' -and $_.FullName -notmatch '\.Test\b' }
+            if ($csprojFiles.Count -eq 0) {
+              $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse
+            }
+            $releaseProject = $csprojFiles[0].FullName
+            echo "Auto-detected release project: $releaseProject"
+          }
+          [xml]$csproj = Get-Content $releaseProject
           $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
           if ($null -eq $targetFrameworks) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
