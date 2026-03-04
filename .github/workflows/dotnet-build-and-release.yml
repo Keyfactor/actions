@@ -12,8 +12,8 @@ on:
         required: false # leave empty for non-release build
         type: string
       release_dir:
-        description: The relative directory inside the repo where the build artifacts to publish for release will be located
-        required: true 
+        description: The relative directory inside the repo where the build artifacts to publish for release will be located. Defaults to <project_dir>/bin/Release if not provided.
+        required: false
         type: string
       release_project:
         description: The relative file location for csproj
@@ -48,6 +48,7 @@ jobs:
 
       - name: Setup build environment
         id: setup_env
+        shell: pwsh
         run: |
             $repoName = "${{ github.repository }}".Split("/")
             echo "Repo Name: $($repoName[-1])"
@@ -57,7 +58,24 @@ jobs:
             echo "Solution File Path: ${slnPath}"
             echo "SOLUTION_PATH=${slnPath}" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
-            echo "release_dir: ${{ inputs.release_dir }}"
+            $releaseProject = "${{ inputs.release_project }}".Trim()
+            if ([string]::IsNullOrEmpty($releaseProject)) {
+              $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse | Where-Object { $_.FullName -notmatch '\.Tests\b' -and $_.FullName -notmatch '\.Test\b' }
+              if ($csprojFiles.Count -eq 0) {
+                $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse
+              }
+              $releaseProject = $csprojFiles[0].FullName
+              echo "Auto-detected release project: $releaseProject"
+            }
+            echo "RELEASE_PROJECT=$releaseProject" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+            $releaseDir = "${{ inputs.release_dir }}".Trim()
+            if ([string]::IsNullOrEmpty($releaseDir)) {
+              $projectDir = (Get-Item $releaseProject).DirectoryName
+              $releaseDir = Join-Path $projectDir "bin\Release"
+              echo "Auto-detected release_dir: $releaseDir"
+            }
+            echo "RELEASE_DIR=$releaseDir" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
             $creatingRelease = "${{ inputs.release_url }}".Trim().Length -gt 0
             echo "Flagged to create release: ${creatingRelease}"
@@ -91,22 +109,13 @@ jobs:
       - name: Execute MSBuild Commands
         run: |
           $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
-          MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer
+          MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer -p:OutputPath="$Env:RELEASE_DIR"
       
       - name: Read Target Frameworks
         id: read_target_frameworks
         shell: pwsh
         run: |
-          $releaseProject = "${{ inputs.release_project }}".Trim()
-          if ([string]::IsNullOrEmpty($releaseProject)) {
-            $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse | Where-Object { $_.FullName -notmatch '\.Tests\b' -and $_.FullName -notmatch '\.Test\b' }
-            if ($csprojFiles.Count -eq 0) {
-              $csprojFiles = Get-ChildItem -Include *.csproj -File -Recurse
-            }
-            $releaseProject = $csprojFiles[0].FullName
-            echo "Auto-detected release project: $releaseProject"
-          }
-          [xml]$csproj = Get-Content $releaseProject
+          [xml]$csproj = Get-Content $Env:RELEASE_PROJECT
           $targetFrameworks = $csproj.Project.PropertyGroup.TargetFrameworks
           if ($null -eq $targetFrameworks) {
             $targetFrameworks = $csproj.Project.PropertyGroup.TargetFramework
@@ -127,7 +136,7 @@ jobs:
           md $outputDir
           foreach ($platform in $platforms) {
             $platform = $platform.Trim()
-            $sourcePath = "${{ github.workspace }}\${{ inputs.release_dir }}\$platform\"
+            $sourcePath = "$Env:RELEASE_DIR\$platform\"
             $zipPath = "$outputDir\${{ env.REPO_NAME }}_${{ inputs.release_version }}_$platform.zip"
             Get-ChildItem -File -Path $sourcePath
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
