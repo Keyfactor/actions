@@ -2,7 +2,8 @@
 # ==========================
 # Useful targets for development and validation
 
-.PHONY: help validate-yaml validate-actions lint check-versions check-permissions clean test all
+.PHONY: help validate-yaml validate-actions lint check-versions check-permissions clean test all \
+        run-status run-logs run-failed-logs job-logs
 
 # Default target
 help:
@@ -24,6 +25,16 @@ help:
 	@echo "  make list-actions       - List all external actions used"
 	@echo "  make list-keyfactor     - List remaining Keyfactor-specific actions"
 	@echo "  make diff-upstream      - Show actions that differ from upstream"
+	@echo ""
+	@echo "Debugging (requires gh CLI):"
+	@echo "  make run-status         - Show status/annotations for a run"
+	@echo "    repo=OWNER/REPO run=RUN_ID"
+	@echo "  make run-logs           - Stream full logs for a run"
+	@echo "    repo=OWNER/REPO run=RUN_ID"
+	@echo "  make run-failed-logs    - Stream only failed step logs for a run"
+	@echo "    repo=OWNER/REPO run=RUN_ID"
+	@echo "  make job-logs           - Stream logs for a specific job"
+	@echo "    repo=OWNER/REPO job=JOB_ID"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean              - Remove generated files"
@@ -177,6 +188,34 @@ clean:
 all: validate-yaml validate-actions check-permissions
 	@echo ""
 	@echo "All validations passed!"
+
+# =============================================================================
+# Debugging Targets
+# Usage examples:
+#   make run-status repo=Keyfactor/k8s-orchestrator run=22678687748
+#   make run-failed-logs repo=Keyfactor/k8s-orchestrator run=22678687748
+#   make job-logs repo=Keyfactor/k8s-orchestrator job=65754108952
+# =============================================================================
+
+run-status:
+	@[ -n "$(repo)" ] || (echo "Usage: make run-status repo=OWNER/REPO run=RUN_ID" && exit 1)
+	@[ -n "$(run)" ]  || (echo "Usage: make run-status repo=OWNER/REPO run=RUN_ID" && exit 1)
+	gh run view $(run) --repo $(repo)
+
+run-logs:
+	@[ -n "$(repo)" ] || (echo "Usage: make run-logs repo=OWNER/REPO run=RUN_ID" && exit 1)
+	@[ -n "$(run)" ]  || (echo "Usage: make run-logs repo=OWNER/REPO run=RUN_ID" && exit 1)
+	gh run view $(run) --repo $(repo) --log
+
+run-failed-logs:
+	@[ -n "$(repo)" ] || (echo "Usage: make run-failed-logs repo=OWNER/REPO run=RUN_ID" && exit 1)
+	@[ -n "$(run)" ]  || (echo "Usage: make run-failed-logs repo=OWNER/REPO run=RUN_ID" && exit 1)
+	gh run view $(run) --repo $(repo) --log-failed
+
+job-logs:
+	@[ -n "$(repo)" ] || (echo "Usage: make job-logs repo=OWNER/REPO job=JOB_ID" && exit 1)
+	@[ -n "$(job)" ]  || (echo "Usage: make job-logs repo=OWNER/REPO job=JOB_ID" && exit 1)
+	gh api repos/$(repo)/actions/jobs/$(job)/logs
 
 # =============================================================================
 # Installation helpers
