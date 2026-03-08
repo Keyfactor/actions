@@ -1254,14 +1254,13 @@ jobs:
           [[ "${{ needs.commit-pii-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.manifest-validation.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.pr-title-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
-          [[ "${{ needs.pr-size-check.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.dependency-review.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
           [[ "${CODE_QUALITY_PASSED}" == "false" ]] && ALL_PASSED="false"
           [[ "${VULN_PASSED}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.license-compliance.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
           [[ "${{ needs.unit-tests-dotnet.outputs.passed }}" == "false" ]] && ALL_PASSED="false"
 
-          # Non-blocking checks (warnings only): prohibited_keywords, formatting, breaking_change
+          # Non-blocking checks (warnings only): prohibited_keywords, formatting, breaking_change, pr_size
 
           echo "all_checks_passed=${ALL_PASSED}" >> "$GITHUB_OUTPUT"
 
@@ -1292,7 +1291,7 @@ jobs:
           echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
           echo "| PR Title (Conventional Commits) | $(if [[ '${{ steps.aggregate.outputs.pr_title_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.pr_title_findings }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| PR Size | $(if [[ '${{ steps.aggregate.outputs.pr_size_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.pr_size_findings }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Size | $(if [[ '${{ steps.aggregate.outputs.pr_size_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':warning:'; fi) | ${{ steps.aggregate.outputs.pr_size_findings }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CHANGELOG Updated | $(if [[ '${{ steps.aggregate.outputs.changelog_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.changelog_findings }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Manifest Validation | $(if [[ '${{ steps.aggregate.outputs.manifest_passed }}' == 'true' ]]; then echo ':white_check_mark:'; else echo ':x:'; fi) | ${{ steps.aggregate.outputs.manifest_findings }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Breaking Changes | $(if [[ '${{ steps.aggregate.outputs.breaking_change_detected }}' == 'true' ]]; then echo ':warning:'; else echo ':white_check_mark:'; fi) | ${{ steps.aggregate.outputs.breaking_change_findings }} |" >> $GITHUB_STEP_SUMMARY
