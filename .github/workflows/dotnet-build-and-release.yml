@@ -139,6 +139,13 @@ jobs:
           foreach ($platform in $platforms) {
             $platform = $platform.Trim()
             $sourcePath = "$Env:RELEASE_DIR\$platform\"
+            # MSBuild with a global OutputPath override writes flat (no TFM subdir).
+            # If the TFM subdir doesn't exist, copy flat output into it so archiving works.
+            if (-not (Test-Path $sourcePath)) {
+              Write-Host "TFM subdir '$sourcePath' not found; copying flat build output into it."
+              New-Item -ItemType Directory -Force -Path $sourcePath | Out-Null
+              Get-ChildItem -Path $Env:RELEASE_DIR -File | Copy-Item -Destination $sourcePath
+            }
             $zipPath = "$outputDir\${{ env.REPO_NAME }}_${{ inputs.release_version }}_$platform.zip"
             Get-ChildItem -File -Path $sourcePath
             Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force -Verbose
