@@ -40,7 +40,7 @@ Reusable GitHub Actions workflows and composite actions for Keyfactor integratio
 | License Compliance | Yes | GPL/AGPL detection |
 | PR Title Validation | Yes | Conventional Commits enforcement |
 | PR Size Check | Yes (>3000 lines) | Encourages smaller, reviewable PRs |
-| CHANGELOG Updated | Yes | Ensures changes are documented |
+| CHANGELOG Updated | Yes | Ensures changes are documented; auto-populates PR description with newest changelog section |
 | Commit PII Check | Yes | Scans for emails/phone numbers in commits |
 | Code Quality | Yes | Language-specific linting (Roslyn, golangci-lint, Checkstyle) |
 | Manifest Validation | Yes | JSON schema validation |
@@ -215,6 +215,7 @@ with:
   dotnet-version: |
     6.0.x
     8.0.x
+    10.0.x
   allow_failure: true  # For projects without tests
   collect_coverage: true
 secrets:

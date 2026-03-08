@@ -456,6 +456,52 @@ jobs:
             echo "findings=CHANGELOG.md was not updated - please document your changes" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Update PR description with changelog diff
+        if: steps.check.outputs.updated == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+        run: |
+          cat > /tmp/update_pr.py << 'PYEOF'
+          import subprocess, re, sys
+
+          MARKER_START = "<!-- kf-changelog-start -->"
+          MARKER_END = "<!-- kf-changelog-end -->"
+
+          with open("CHANGELOG.md") as f:
+              content = f.read()
+
+          parts = re.split(r"(?m)^(?=## \[)", content)
+          sections = [p for p in parts if p.startswith("## [")]
+          if not sections:
+              print("No parseable changelog section found in CHANGELOG.md")
+              sys.exit(0)
+
+          newest = sections[0].strip()
+          pr_num = sys.argv[1]
+
+          res = subprocess.run(
+              ["gh", "pr", "view", pr_num, "--json", "body", "-q", ".body"],
+              capture_output=True, text=True, check=True
+          )
+          current = res.stdout.strip()
+
+          block = f"{MARKER_START}\n## Changes in This Release\n\n{newest}\n{MARKER_END}"
+
+          if MARKER_START in current:
+              new_body = re.sub(
+                  re.escape(MARKER_START) + r".*?" + re.escape(MARKER_END),
+                  block, current, flags=re.DOTALL
+              )
+          else:
+              sep = "\n\n---\n\n" if current else ""
+              new_body = block + sep + current
+
+          subprocess.run(["gh", "pr", "edit", pr_num, "--body", new_body], check=True)
+          print("PR description updated with changelog section")
+          PYEOF
+          python3 /tmp/update_pr.py "${{ github.event.pull_request.number }}"
+
   # =============================================================================
   # Commit PII Check
   # =============================================================================
