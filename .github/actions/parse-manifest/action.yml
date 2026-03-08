@@ -71,9 +71,9 @@ runs:
       run: |
         MANIFEST="${{ inputs.manifest_path }}"
 
-        # Build configuration
-        echo "release_dir=$(jq -r '.about.release_dir // "."' "$MANIFEST")" >> "$GITHUB_OUTPUT"
-        echo "release_project=$(jq -r '.about.release_project // ""' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        # Build configuration (check root level first, fall back to .about for legacy manifests)
+        echo "release_dir=$(jq -r '.release_dir // .about.release_dir // "."' "$MANIFEST")" >> "$GITHUB_OUTPUT"
+        echo "release_project=$(jq -r '.release_project // .about.release_project // ""' "$MANIFEST")" >> "$GITHUB_OUTPUT"
         echo "integration_type=$(jq -r '.integration_type // "unknown"' "$MANIFEST")" >> "$GITHUB_OUTPUT"
 
         # Catalog configuration
