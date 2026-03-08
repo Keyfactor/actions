@@ -654,13 +654,13 @@ jobs:
         id: build
         run: |
           if dotnet build --configuration Release --no-restore /p:TreatWarningsAsErrors=false 2>&1 | tee build_output.txt; then
-            WARNINGS=$(grep -c "warning" build_output.txt || echo "0")
-            ERRORS=$(grep -c "error" build_output.txt || echo "0")
+            WARNINGS=$(grep -c "warning" build_output.txt 2>/dev/null) || WARNINGS=0
+            ERRORS=$(grep -c "error" build_output.txt 2>/dev/null) || ERRORS=0
             echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
             echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
             echo "build_passed=true" >> "$GITHUB_OUTPUT"
           else
-            ERRORS=$(grep -c "error" build_output.txt || echo "1")
+            ERRORS=$(grep -c "error" build_output.txt 2>/dev/null) || ERRORS=1
             echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
             echo "warnings=0" >> "$GITHUB_OUTPUT"
             echo "build_passed=false" >> "$GITHUB_OUTPUT"
