@@ -112,7 +112,7 @@ jobs:
       - name: Execute MSBuild Commands
         run: |
           $newVer = "${{ inputs.release_version || '1.0.0' }}".TrimStart('v').Split('-')[0]
-          MSBuild.exe $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer -p:OutputPath="$Env:RELEASE_DIR"
+          dotnet msbuild $Env:SOLUTION_PATH -p:RestorePackagesConfig=false -p:Configuration=Release -p:Version=$newVer -p:OutputPath="$Env:RELEASE_DIR"
       
       - name: Read Target Frameworks
         id: read_target_frameworks
