@@ -131,17 +131,9 @@ jobs:
     permissions:
       contents: write  # Explicitly grant write permission
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v4
-    with:
-      command_token_url: ${{ vars.COMMAND_TOKEN_URL }}
-      command_hostname: ${{ vars.COMMAND_HOSTNAME }}
-      command_base_api_path: ${{ vars.COMMAND_API_PATH }}
+    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@feature/dotnet-doctool
     secrets:
       token: ${{ secrets.token }}
-      entra_username: ${{ secrets.ENTRA_USERNAME }}
-      entra_password: ${{ secrets.ENTRA_PASSWORD }}
-      command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
-      command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
 
   call-update-catalog-workflow:
     needs: call-assign-from-json-workflow
