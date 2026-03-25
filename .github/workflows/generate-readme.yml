@@ -13,13 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     name: Use private doctool action in public repository
     steps:
-      - name: checkout-action
+      - name: Checkout integration repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+
+      - name: Checkout doctool action
         uses: actions/checkout@v4
         with:
           repository: keyfactor/doctooldotnet
           ref: feature/logging-and-docs
           path: doctooldotnet
           token: ${{ secrets.token }}
+          clean: false
 
       - name: Launch local doctool
         uses: ./doctooldotnet
