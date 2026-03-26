@@ -5,31 +5,6 @@ on:
       token:
         description: 'Secret token from caller workflow to approve readme'
         required: true
-      entra_username:
-        description: 'Entra username for authentication'
-        required: false
-      entra_password:
-        description: 'Entra password for authentication'
-        required: false
-      command_client_id:
-        description: 'Command client ID for API authentication'
-        required: false
-      command_client_secret:
-        description: 'Command client secret for API authentication'
-        required: false
-    inputs:
-      command_token_url:
-        type: string
-        description: 'URL for obtaining command tokens'
-        required: false
-      command_hostname:
-        type: string
-        description: 'Command hostname for API endpoints'
-        required: false
-      command_base_api_path:
-        type: string
-        description: 'Base API path for the Command API'
-        required: false
 permissions:
   contents: write
 
@@ -38,22 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     name: Use private doctool action in public repository
     steps:
-      - name: checkout-action
-        uses: keyfactor/checkout@v4
+      - name: Checkout integration repository
+        uses: actions/checkout@v4
         with:
-          repository: keyfactor/doctool
-          path: doctool
           token: ${{ secrets.token }}
 
+      - name: Checkout doctool action
+        uses: actions/checkout@v4
+        with:
+          repository: keyfactor/doctooldotnet
+          ref: feature/logging-and-docs
+          path: doctooldotnet
+          token: ${{ secrets.token }}
+          clean: false
+
       - name: Launch local doctool
-        uses: ./doctool
+        uses: ./doctooldotnet
         id: launch-doctool
         with:
           token: ${{ secrets.token }}
-          entra_username: ${{ secrets.entra_username }}
-          entra_password: ${{ secrets.entra_password }}
-          command_client_id: ${{ secrets.command_client_id }}
-          command_client_secret: ${{ secrets.command_client_secret }}
-          command_token_url: ${{ vars.DOCTOOL_COMMAND_TOKEN_URL }}
-          command_hostname: ${{ vars.DOCTOOL_COMMAND_HOSTNAME }}
-          command_base_api_path: ${{ vars.DOCTOOL_COMMAND_BASE_API_PATH }}
