@@ -43,7 +43,6 @@ jobs:
         with:
           repository: keyfactor/doctool
           path: doctool
-          ref: fix/chromedriver-version-lookup
           token: ${{ secrets.token }}
 
       - name: Launch local doctool
