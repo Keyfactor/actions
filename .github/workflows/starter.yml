@@ -130,7 +130,7 @@ jobs:
   call-generate-readme-workflow:
     permissions:
       contents: write  # Explicitly grant write permission
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref_name != 'main') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.head_ref != 'main')
     uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v5
     secrets:
       token: ${{ secrets.token }}
