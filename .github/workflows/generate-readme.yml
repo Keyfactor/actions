@@ -22,7 +22,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: keyfactor/doctooldotnet
-          ref: feature/logging-and-docs
           path: doctooldotnet
           token: ${{ secrets.token }}
           clean: false
