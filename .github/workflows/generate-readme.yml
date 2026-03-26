@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.token }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Checkout doctool action
         uses: actions/checkout@v4
