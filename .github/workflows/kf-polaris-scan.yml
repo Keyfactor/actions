@@ -3,24 +3,21 @@
 name: CI Polaris Scanning 
 on:
   workflow_call:
-    secrets:
-      token:
-        description: 'Secret token from caller workflow to access private packages'
-        required: true
-
     inputs:
       scan_branch:
         description: Incoming branch to release or main
         required: true
         type: string
-
+permissions:
+  contents: write               # Required to push changes or create fix branches
+  pull-requests: write          # Required to add comments or create fix pull requests
 jobs:
-  build:
+  polaris_scan:
     runs-on: [ ubuntu-latest ]
     continue-on-error: true
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Polaris Scan
         uses: blackduck-inc/black-duck-security-scan@v2
         with:
@@ -29,8 +26,9 @@ jobs:
           polaris_access_token: ${{ secrets.POLARIS_TOKEN }}
           polaris_assessment_types: "SCA,SAST"
           
-          polaris_application_name: integrations-${{ github.event.repository.name }}
-          github_token: ${{ secrets.token }}
+          polaris_application_name: "Integrations"
+          polaris_project_name: ${{ github.event.repository.name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          polaris_prComment_enabled: true
+          polaris_reports_sarif_create: true # Create SARIF report and upload it as artifact
 
-          polaris_test_sast_location: "remote"
-          polaris_test_sca_location: "remote"
