@@ -325,3 +325,10 @@ jobs:
     uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v6
     secrets:
       token: ${{ secrets.token }}
+
+  call-polaris-scan-workflow:
+    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
+    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v4
+    with:
+      scan_branch: ${{ github.event.pull_request.head.ref }}
+
