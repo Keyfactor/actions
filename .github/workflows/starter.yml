@@ -45,9 +45,11 @@ on:
         type: string
         description: 'Base API path for the Command API'
         required: false
+
 permissions:
   pull-requests: write
-  content: write
+  contents: write
+
 jobs:
   call-assign-from-json-workflow:
     uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v5
