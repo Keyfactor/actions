@@ -46,6 +46,10 @@ on:
         description: 'Base API path for the Command API'
         required: false
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   check-token-workflow:
     runs-on: ubuntu-latest
