@@ -1,19 +1,9 @@
-# ============================================================================
-# PROPOSED replacement for: Keyfactor/actions/.github/workflows/update-catalog.yml
-#
-# Changes from current version:
-#   1. Adds validation gate (repo name filter, manifest field checks, visibility)
-#   2. Replaces direct-to-main commit with PR-based flow
-#   3. Handles private repos as "Coming Soon" entries (link_github=false)
-#   4. Labels PRs by type: catalog-add, catalog-update, coming-soon
-# ============================================================================
-
 name: Update Keyfactor Integrations Catalog Entry
 on:
   workflow_call:
     secrets:
       token:
-        description: 'Secret token from caller workflow to access catalog repo'
+        description: 'Secret token from caller workflow to access SDK repo'
         required: true
 
 jobs:
@@ -23,97 +13,14 @@ jobs:
     steps:
       - name: Checkout project repo
         uses: keyfactor/checkout@v4
-
+      
       - name: Checkout catalog repo
         uses: keyfactor/checkout@v4
         with:
           token: ${{ secrets.token }}
           path: './catalog-temp/'
-          repository: 'Keyfactor/integrations-catalog'
-
-      # ----------------------------------------------------------------
-      # STEP 1: Validation Gate
-      # ----------------------------------------------------------------
-      - name: Validate entry
-        id: validate
-        env:
-          GH_TOKEN: ${{ secrets.token }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          REPO_FULL: ${{ github.repository }}
-        run: |
-          echo "### Validating: $REPO_NAME" >> "$GITHUB_STEP_SUMMARY"
-
-          # --- Failsafe: reject -dev, -test, -staging, -poc repo names ---
-          # NOTE: This is a failsafe only. Developers are responsible for setting
-          # update_catalog=false in their manifest for non-production repos.
-          if echo "$REPO_NAME" | grep -qE '-(dev|test|staging|poc)$'; then
-            echo "::error::Repository name '$REPO_NAME' matches a non-production pattern (-dev, -test, -staging, -poc). Set update_catalog=false in your integration-manifest.json for non-production repos."
-            echo "rejected=true" >> "$GITHUB_OUTPUT"
-            echo "reject_reason=Repo name matches non-production pattern. Developers: set \`update_catalog=false\` in your manifest." >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          # --- Validate required manifest fields ---
-          if [ ! -f "integration-manifest.json" ]; then
-            echo "::error::integration-manifest.json not found in repository root."
-            exit 1
-          fi
-
-          NAME=$(jq -r '.name // empty' integration-manifest.json)
-          TYPE=$(jq -r '.integration_type // empty' integration-manifest.json)
-          DESC=$(jq -r '.description // empty' integration-manifest.json)
-          LINK_GITHUB=$(jq -r '.link_github // "true"' integration-manifest.json | tr '[:upper:]' '[:lower:]')
-
-          ERRORS=""
-          if [ -z "$NAME" ]; then
-            ERRORS="$ERRORS\n- Missing required field: \`name\`"
-          fi
-          if [ -z "$TYPE" ]; then
-            ERRORS="$ERRORS\n- Missing required field: \`integration_type\`"
-          fi
-          if [ -z "$DESC" ]; then
-            ERRORS="$ERRORS\n- Missing required field: \`description\`"
-          fi
-
-          # Validate integration_type against allowed values
-          ALLOWED_TYPES="orchestrator windows-orchestrator iot-orchestrator ca-gateway anyca-plugin caplugin dns-plugin pam approval-handler orchestrator-registration metadata registration-handler alert-handler api-client terraform"
-          if [ -n "$TYPE" ]; then
-            if ! echo "$ALLOWED_TYPES" | grep -qw "$TYPE"; then
-              ERRORS="$ERRORS\n- Invalid \`integration_type\`: \`$TYPE\`. Allowed: $ALLOWED_TYPES"
-            fi
-          fi
-
-          if [ -n "$ERRORS" ]; then
-            printf "::error::Manifest validation failed:%b\n" "$ERRORS"
-            exit 1
-          fi
-
-          # --- Check repo visibility ---
-          IS_PRIVATE=$(gh api "repos/$REPO_FULL" --jq '.private')
-
-          if [ "$IS_PRIVATE" = "true" ] && [ "$LINK_GITHUB" = "true" ]; then
-            echo "::error::Repository '$REPO_FULL' is private but link_github=true. This would create a broken link on the public catalog. Set link_github=false in your manifest to create a 'Coming Soon' entry, or make the repo public first."
-            exit 1
-          fi
-
-          # Determine entry type for labeling
-          if [ "$IS_PRIVATE" = "true" ] && [ "$LINK_GITHUB" = "false" ]; then
-            echo "entry_type=coming-soon" >> "$GITHUB_OUTPUT"
-            echo "Entry type: Coming Soon (private repo)" >> "$GITHUB_STEP_SUMMARY"
-          elif [ -f "./catalog-temp/_integrations/$REPO_NAME.md" ]; then
-            echo "entry_type=catalog-update" >> "$GITHUB_OUTPUT"
-            echo "Entry type: Update (existing entry)" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "entry_type=catalog-add" >> "$GITHUB_OUTPUT"
-            echo "Entry type: Add (new entry)" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          echo "link_github=$LINK_GITHUB" >> "$GITHUB_OUTPUT"
-          echo "Validation passed" >> "$GITHUB_STEP_SUMMARY"
-
-      # ----------------------------------------------------------------
-      # STEP 2: Render Template
-      # ----------------------------------------------------------------
+          repository: 'Keyfactor/integrations-catalog' # Change back to integrations-catalog after testing
+      
       - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
         with:
           template: ./catalog-temp/_integration.md.tpl
@@ -123,102 +30,12 @@ jobs:
             repository= ${{ format('https://github.com/{0}', github.repository) }}
         env:
           GITHUB_TOKEN: ${{ secrets.token }}
-
-      # ----------------------------------------------------------------
-      # STEP 3: Create PR (instead of direct commit)
-      # ----------------------------------------------------------------
-      - name: Create or update PR
-        env:
-          GH_TOKEN: ${{ secrets.token }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          ENTRY_TYPE: ${{ steps.validate.outputs.entry_type }}
-        working-directory: './catalog-temp/'
-        run: |
-          BRANCH="catalog-update/$REPO_NAME"
-
-          git config user.name "Keyfactor"
-          git config user.email "keyfactor@keyfactor.github.io"
-
-          # Check if branch already exists on remote
-          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
-            git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
-            git reset --hard origin/main
-          else
-            git checkout -b "$BRANCH"
-          fi
-
-          # Stage the rendered file
-          git add "_integrations/$REPO_NAME.md" --force
-
-          # Check if there are actual changes
-          if git diff --cached --quiet; then
-            echo "No changes detected — catalog entry is already up to date."
-            echo "### No changes" >> "$GITHUB_STEP_SUMMARY"
-            echo "Catalog entry for \`$REPO_NAME\` is already current." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          # Determine commit message
-          case "$ENTRY_TYPE" in
-            catalog-add)
-              COMMIT_MSG="Add catalog entry for $REPO_NAME"
-              PR_TITLE="Add integration: $REPO_NAME"
-              ;;
-            catalog-update)
-              COMMIT_MSG="Update catalog entry for $REPO_NAME"
-              PR_TITLE="Update integration: $REPO_NAME"
-              ;;
-            coming-soon)
-              COMMIT_MSG="Add Coming Soon catalog entry for $REPO_NAME"
-              PR_TITLE="Coming Soon: $REPO_NAME"
-              ;;
-          esac
-
-          git commit -m "$COMMIT_MSG"
-          git push origin "$BRANCH" --force
-
-          # Ensure the three labels this workflow uses exist (idempotent — gh
-          # label create exits 1 if the label is already present, which we
-          # swallow). Without this, gh pr create --label hard-fails when the
-          # label is missing in the catalog repo.
-          gh label create catalog-add    --color "2ECC71" --description "New integration entry added to the catalog" 2>/dev/null || true
-          gh label create catalog-update --color "1A73E8" --description "Existing integration entry updated"               2>/dev/null || true
-          gh label create coming-soon    --color "F39C12" --description "Private repo published as a Coming Soon entry"   2>/dev/null || true
-
-          # Build PR body
-          PR_BODY=$(cat <<EOF
-          ## Catalog Entry: \`$REPO_NAME\`
-
-          **Type:** $ENTRY_TYPE
-          **Source:** [${REPO_NAME}](https://github.com/${{ github.repository }})
-          **Triggered by:** Push to \`${{ github.ref_name }}\` by @${{ github.actor }}
-
-          ### Entry Preview
-          \`\`\`yaml
-          $(cat "_integrations/$REPO_NAME.md")
-          \`\`\`
-
-          ---
-          *This PR was automatically created by the catalog update workflow.*
-          *Review the entry content above and merge when ready.*
-          EOF
-          )
-
-          # Check if a PR already exists for this branch
-          EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
-
-          if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
-            echo "PR #$EXISTING_PR already exists for branch $BRANCH — updated with force push."
-            echo "### Updated existing PR #$EXISTING_PR" >> "$GITHUB_STEP_SUMMARY"
-          else
-            gh pr create \
-              --title "$PR_TITLE" \
-              --body "$PR_BODY" \
-              --label "$ENTRY_TYPE" \
-              --base main \
-              --head "$BRANCH"
-
-            echo "### Created PR" >> "$GITHUB_STEP_SUMMARY"
-            echo "PR created for \`$REPO_NAME\` with label \`$ENTRY_TYPE\`" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        
+      - uses: Keyfactor/add-and-commit@v9.1.4
+        with:
+          author_name: 'Keyfactor'
+          author_email: 'keyfactor@keyfactor.github.io'
+          branch: 'main'
+          message: ${{ format('Added the manifest for {0}', github.event.repository.name) }}
+          add: ${{ format('_integrations/{0}.md --force', github.event.repository.name) }}
+          cwd: './catalog-temp/'
