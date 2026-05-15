@@ -46,7 +46,7 @@ jobs:
           # --- Failsafe: reject -dev, -test, -staging, -poc repo names ---
           # NOTE: This is a failsafe only. Developers are responsible for setting
           # update_catalog=false in their manifest for non-production repos.
-          if echo "$REPO_NAME" | grep -qE '-(dev|test|staging|poc)$'; then
+          if echo "$REPO_NAME" | grep -qE -- '-(dev|test|staging|poc)$'; then
             echo "::error::Repository name '$REPO_NAME' matches a non-production pattern (-dev, -test, -staging, -poc). Set update_catalog=false in your integration-manifest.json for non-production repos."
             echo "rejected=true" >> "$GITHUB_OUTPUT"
             echo "reject_reason=Repo name matches non-production pattern. Developers: set \`update_catalog=false\` in your manifest." >> "$GITHUB_OUTPUT"
@@ -62,7 +62,10 @@ jobs:
           NAME=$(jq -r '.name // empty' integration-manifest.json)
           TYPE=$(jq -r '.integration_type // empty' integration-manifest.json)
           DESC=$(jq -r '.description // empty' integration-manifest.json)
-          LINK_GITHUB=$(jq -r '.link_github // "true"' integration-manifest.json | tr '[:upper:]' '[:lower:]')
+          # NOTE: don't use jq's // "true" default — that operator triggers on
+          # both null AND false, which would silently flip link_github: false
+          # to "true". Use an explicit null check instead.
+          LINK_GITHUB=$(jq -r 'if .link_github == null then "true" else .link_github end' integration-manifest.json | tr '[:upper:]' '[:lower:]')
 
           ERRORS=""
           if [ -z "$NAME" ]; then
