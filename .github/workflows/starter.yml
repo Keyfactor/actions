@@ -5,185 +5,35 @@ on:
       token:
         description: 'GitHub token'
         required: true
-      gpg_key:
-        description: 'GPG Private Key'
+      age-key:
+        description: 'key for decrypting age-encrypted secrets'
         required: true
-      gpg_pass:
-        description: 'GPG Passphrase'
-        required: true
-      docker-user:
-        description: 'DockerHub User'
-        required: false
-      docker-token:
-        description: 'DockerHub token'
-        required: false
-      scan_token:
-        description: 'Polaris token'
-        required: false
-      entra_username:
-        description: 'Entra username for authentication'
-        required: false
-      entra_password:
-        description: 'Entra password for authentication'
-        required: false
-      command_client_id:
-        description: 'Command client ID for API authentication'
-        required: false
-      command_client_secret:
-        description: 'Command client secret for API authentication'
-        required: false
     inputs:
-      command_token_url:
-        type: string
-        description: 'URL for obtaining command tokens'
-        required: false
-      command_hostname:
-        type: string
-        description: 'Command hostname for API endpoints'
-        required: false
-      command_base_api_path:
-        type: string
-        description: 'Base API path for the Command API'
-        required: false
-
+      integration-type:
+        description: 'Type of integration (go, dotnet, helm)'
+        required: true
+        type: choice
+        options:
+          - go
+          - dotnet
+          - helm
+        
 permissions:
+  packages: write
   pull-requests: write
   contents: write
 
 jobs:
-  check-token-workflow:
+  build-dotnet:
     runs-on: ubuntu-latest
-    name: Check for legacy PAT tokens
+    if: ${{ inputs.integration-type == 'dotnet' }}
+
     steps:
-      - name: Check
-        run: |
-          if [[ "${{ secrets.token }}" == "${{ secrets.V2BUILDTOKEN }}" ]]; then
-            echo "::warning title='Legacy infrastructure':: AB#78982: You are using the legacy V2BUILDTOKEN secret. Please migrate to per-action tokens and pass the GITHUB_TOKEN secret instead."
-          fi
-
-  call-assign-from-json-workflow:
-    needs: check-token-workflow
-    uses: Keyfactor/actions/.github/workflows/assign-env-from-json.yml@v4
-
-  call-get-primary-language:
-    outputs:
-      primary_language: ${{ steps.read.outputs.primary_language }}
-    runs-on: ubuntu-latest
-    name: Detect Primary Language
-    steps:
-      - name: Checkout
-        uses: keyfactor/checkout@v4
+      - name: Call Build and Pack Action
+        uses: keyfactor/actions/build-and-pack@indrora/nextgen-actions
+        matrix:
+           dotnet-version: ['8.0', '10.0']
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Read primary language
-        id: read
-        uses: keyfactor/action-get-primary-language@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Display type
-        id: display
-        run: |
-          echo "primary_language=${{ steps.read.outputs.primary_language}}" | tee -a "$GITHUB_OUTPUT" | tee -a $GITHUB_STEP_SUMMARY
-
-  call-goreleaser-exists:
-    outputs:
-      goreleaser-exists: ${{ steps.check_files.outputs.files_exists }}
-    runs-on: ubuntu-latest
-    name: Check for .goreleaser file
-    steps:
-      - name: Checkout
-        uses: keyfactor/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check file existence
-        id: check_files
-        uses: keyfactor/file-existence-action@v3
-        with:
-          files: ".goreleaser.y*ml"
-
-  setup_platforms:
-    runs-on: ubuntu-latest
-    outputs:
-      platform_matrix: ${{ steps.vars.outputs.platform_matrix }}
-    steps:
-      - name: Checkout
-        uses: keyfactor/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create an array from platform_list input #  
-        id: vars
-        run:
-          echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-
-  call-create-github-release-workflow:
-    needs: check-token-workflow
-    uses: Keyfactor/actions/.github/workflows/github-release.yml@v4
-
-  call-dotnet-build-and-release-workflow:
-    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow ]
-    if: needs.call-get-primary-language.outputs.primary_language == 'C#'
-    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v4
-    with:
-      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
-      release_url: ${{ needs.call-create-github-release-workflow.outputs.release_url }}
-      release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
-      release_project: ${{ needs.call-assign-from-json-workflow.outputs.release_project }}
-      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }}
-    secrets:
-      token: ${{ secrets.token  }}
-
-  call-go-build-and-release-workflow:
-    needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists ]
-    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true'
-    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v4
-    with:
-      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
-      gpg_key: ${{ secrets.gpg_key }}
-      gpg_pass: ${{ secrets.gpg_pass }}
-
-  call-generate-readme-workflow:
-    permissions:
-      contents: write  # Explicitly grant write permission
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    uses: Keyfactor/actions/.github/workflows/generate-readme.yml@v4
-    with:
-      command_token_url: ${{ vars.COMMAND_TOKEN_URL }}
-      command_hostname: ${{ vars.COMMAND_HOSTNAME }}
-      command_base_api_path: ${{ vars.COMMAND_API_PATH }}
-    secrets:
-      token: ${{ secrets.token }}
-      entra_username: ${{ secrets.ENTRA_USERNAME }}
-      entra_password: ${{ secrets.ENTRA_PASSWORD }}
-      command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
-      command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
-
-  call-update-catalog-workflow:
-    needs: call-assign-from-json-workflow
-    if: needs.call-assign-from-json-workflow.outputs.update_catalog  == 'true' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    uses: Keyfactor/actions/.github/workflows/update-catalog.yml@v4
-    secrets:
-      token: ${{ secrets.token }}
-
-  call-repository-configuration-workflow:
-    if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
-    uses: Keyfactor/actions/.github/workflows/kf-configure-repo.yml@v4
-    secrets:
-      token: ${{ secrets.token }}
-
-  call-polaris-scan-workflow:
-    if: github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release-') || github.base_ref == 'main')
-    uses: Keyfactor/actions/.github/workflows/kf-polaris-scan.yml@v4
-    with:
-      scan_branch: ${{ github.event.pull_request.head.ref }}
-    
-  call-post-release-workflow:
-    needs: [ call-assign-from-json-workflow, call-create-github-release-workflow ]
-    if: needs.call-create-github-release-workflow.outputs.IS_FULL_RELEASE == 'True'
-    uses: Keyfactor/actions/.github/workflows/kf-post-release.yml@v4
-    secrets:
-      token: ${{ secrets.token }}
-    with:
-      branchname: ${{ github.event.pull_request.base.ref }}
-      release_version: ${{ needs.call-create-github-release-workflow.outputs.release_version }}
+          dotnet-version: ${{ matrix.dotnet-version }}
+          src-dir: 'RemoteFile'
+          github-token: ${{ secrets.token }}

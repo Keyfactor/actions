@@ -1,0 +1,113 @@
+name: 'Build and Pack .NET Project'
+description: 'Build a .NET project and create a packaged zip file'
+author: 'Keyfactor'
+
+inputs:
+  dotnet-version:
+    description: '.NET version to use for building'
+    required: true
+    default: '8.0'
+  src-dir:
+    description: 'Source code directory'
+    required: true
+    default: 'RemoteFile'
+  github-token:
+    description: 'GitHub token for package authentication'
+    required: true
+  additional-dotnet-version:
+    description: 'Additional .NET version to install (e.g., for compatibility)'
+    required: false
+    default: '10.0'
+
+outputs:
+  zip-file:
+    description: 'Name of the generated zip file'
+    value: ${{ steps.set-outputs.outputs.zip-file }}
+  zip-path:
+    description: 'Path to the generated zip file'
+    value: ${{ steps.set-outputs.outputs.zip-path }}
+  version:
+    description: 'Determined semver version'
+    value: ${{ steps.semver.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine Version
+      id: semver
+      uses: paulhatch/semantic-version@v5.4.0
+      with:
+        tag_prefix: "v"
+        major_pattern: "(MAJOR)"
+        minor_pattern: "(MINOR)"
+        version_format: "${major}.${minor}.${patch}"
+        search_commit_body: false
+        user_format_type: "csv"
+        enable_prerelease_mode: false
+
+    - name: Create temporary global.json
+      shell: bash
+      run: |
+        echo '{"sdk":{"version": "${{ inputs.dotnet-version }}"}}' > ./global.json
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          ${{ inputs.additional-dotnet-version }}
+          ${{ inputs.dotnet-version }}
+        source-url: https://nuget.pkg.github.com/keyfactor/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{ inputs.github-token }}
+
+    - name: Set environment variables
+      shell: bash
+      env:
+        SRC_DIR: ${{ inputs.src-dir }}
+        VERSION: ${{ steps.semver.outputs.version }}
+        ZIP_FILE: ${{ inputs.src-dir }}-${{ inputs.dotnet-version }}-${{ steps.semver.outputs.version }}.zip
+        NETFRAMEWORK: net${{ inputs.dotnet-version }}
+      run: |
+        echo "SRC_DIR=${SRC_DIR}" >> $GITHUB_ENV
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        echo "NETFRAMEWORK=${NETFRAMEWORK}" >> $GITHUB_ENV
+        echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_ENV
+
+    - name: Run Build
+      shell: bash
+      run: |
+        echo "Building with version: $VERSION"
+        dotnet restore ${SRC_DIR} -p:TargetFramework=$NETFRAMEWORK -p:Version=$VERSION
+        dotnet build ${SRC_DIR} --no-restore --configuration Release -p:TargetFramework=$NETFRAMEWORK -p:Version=$VERSION
+
+    - name: Pack
+      shell: bash
+      env:
+        SRC_DIR: ${{ inputs.src-dir }}
+        VERSION: ${{ steps.semver.outputs.version }}
+        NETFRAMEWORK: net${{ inputs.dotnet-version }}
+        ZIP_FILE: ${{ inputs.src-dir }}-${{ inputs.dotnet-version }}-${{ steps.semver.outputs.version }}.zip
+      run: |
+        [[ -d ./output ]] || mkdir ./output
+        dotnet publish ${SRC_DIR} -p:TargetFramework=$NETFRAMEWORK \
+          --no-restore --no-build --configuration Release \
+          --output ./output \
+          --self-contained false -p:PublishTrimmed=true \
+          -p:Version=$VERSION
+
+    - name: Create zip file
+      shell: bash
+      working-directory: ./output
+      run: zip -q -r ../${ZIP_FILE} ./*
+
+    - name: List zip contents
+      shell: bash
+      run: unzip -l ${ZIP_FILE}
+
+    - name: Set outputs
+      id: set-outputs
+      shell: bash
+      run: |
+        echo "zip-file=${ZIP_FILE}" >> $GITHUB_OUTPUT
+        echo "zip-path=$(pwd)/${ZIP_FILE}" >> $GITHUB_OUTPUT
+        echo "Built version: $VERSION"
