@@ -1,0 +1,57 @@
+name: Publish release
+# Creates the GitHub release AND attaches build artifacts in a single atomic
+# step, using softprops/action-gh-release (which creates-if-absent + uploads).
+# Callers gate this on a successful build + compliance run, so a release can
+# never exist before the checks that protect it have passed.
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: 'The semantic version / tag to publish.'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the release as a pre-release (RC).'
+        required: false
+        type: boolean
+        default: false
+      artifact_name:
+        description: 'Name of the workflow artifact to download and attach. Empty = release with no assets.'
+        required: false
+        type: string
+        default: ''
+    # No secrets: the release is authored with the implicit GITHUB_TOKEN
+    # (contents: write below is sufficient to create the release and tag).
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Create release and upload assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifact
+        if: inputs.artifact_name != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: dist
+
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: ${{ inputs.release_version }}
+          tag_name: ${{ inputs.release_version }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ inputs.prerelease }}
+          draft: false
+          body: |
+            [Changelog](/./CHANGELOG.md)
+            [Readme](/./README.md)
+            For the latest README.md updates visit the [Main Page](/../main) for this repository.
+          files: dist/**
+          fail_on_unmatched_files: false
+          token: ${{ secrets.GITHUB_TOKEN }}

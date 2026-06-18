@@ -1,0 +1,249 @@
+name: Repository lifecycle tasks
+# Consolidates the repo-housekeeping workflows (README generation, catalog
+# update, release-branch configuration, and the post-release PR) into one
+# reusable workflow. Each job self-gates on the triggering event, so a starter
+# can call this once and the right task runs for the current event.
+on:
+  workflow_call:
+    inputs:
+      is_full_release:
+        description: 'True when a release-*.* PR was merged (drives the post-release PR).'
+        required: false
+        type: string
+        default: 'False'
+      release_version:
+        description: 'The released version (used in the post-release PR title).'
+        required: false
+        type: string
+        default: ''
+      release_branch:
+        description: 'The release-*.* branch to merge back to main.'
+        required: false
+        type: string
+        default: ''
+    # No PAT: this workflow uses the implicit GITHUB_TOKEN only. NOTE that the
+    # cross-repo / org-admin jobs below (doctool, catalog, configure-*) cannot
+    # function on GITHUB_TOKEN and are retained as placeholders pending their
+    # structural replacements (see per-job notes).
+
+permissions:
+  contents: read
+
+jobs:
+  # --- README generation via doctool (PR synchronize / non-main push / dispatch) ---
+  # ⚠ GITHUB_TOKEN limitation: the doctool checkout below targets the PRIVATE repo
+  # keyfactor/doctooldotnet, which GITHUB_TOKEN cannot read (it is scoped to this
+  # repo only). This job will fail until doctool is made public/vendored or a
+  # GitHub App token is introduced. See:
+  # https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication
+  readme:
+    name: Generate README
+    if: (github.event_name == 'push' && github.ref_name != 'main') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.head_ref != 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout integration repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Checkout doctool action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: keyfactor/doctooldotnet
+          path: doctooldotnet
+          token: ${{ secrets.GITHUB_TOKEN }}
+          clean: false
+          persist-credentials: false
+
+      - name: Run doctool
+        uses: ./doctooldotnet
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- Catalog entry update (main push/dispatch, only when update_catalog: true) ---
+  # ⚠ GITHUB_TOKEN limitation: the catalog job checks out and PUSHES to another
+  # repo (Keyfactor/integrations-catalog), which GITHUB_TOKEN cannot do. This is
+  # slated to be replaced by a pull-model workflow living in the catalog repo;
+  # until then the catalog push will fail.
+  catalog-gate:
+    name: Check catalog flag
+    if: github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      update_catalog: ${{ steps.read.outputs.update_catalog }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Read update_catalog from manifest
+        id: read
+        run: echo "update_catalog=$(jq -r '.update_catalog // false' integration-manifest.json)" | tee -a "$GITHUB_OUTPUT"
+
+  catalog:
+    name: Update integrations catalog
+    needs: catalog-gate
+    if: needs.catalog-gate.outputs.update_catalog == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout project repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout catalog repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./catalog-temp/
+          repository: 'Keyfactor/integrations-catalog'
+
+      # Keyfactor/jinja2-action is a documented exception: it carries a custom
+      # multi-data-file feature absent from upstream cuchi/jinja2-action, so it
+      # cannot be replaced 1:1 (zizmor unpinned-uses is accepted here).
+      - name: Render catalog entry
+        uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
+        with:
+          template: ./catalog-temp/_integration.md.tpl
+          output_file: ${{ format('./catalog-temp/_integrations/{0}.md', github.event.repository.name) }}
+          data_file: integration-manifest.json
+          variables: |
+            repository= ${{ format('https://github.com/{0}', github.repository) }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit catalog entry
+        working-directory: ./catalog-temp
+        env:
+          NAME: ${{ github.event.repository.name }}
+        run: |
+          git config user.name 'Keyfactor'
+          git config user.email 'keyfactor@keyfactor.github.io'
+          git add "_integrations/${NAME}.md" --force
+          if git diff --cached --quiet; then
+            echo "No catalog changes to commit."
+          else
+            git commit -m "Added the manifest for ${NAME}"
+            git push origin HEAD:main
+          fi
+
+  # --- Release-branch configuration (on create of a release-*.* branch) ---
+  # ⚠ GITHUB_TOKEN limitation: topics, description, team, and branch-protection
+  # changes require org administration/members scopes that GITHUB_TOKEN does not
+  # have (no such permissions key exists for it). These jobs will fail until repo
+  # configuration is moved to settings-as-code or a GitHub App token.
+  configure-repo:
+    name: Configure repository settings
+    if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+      - name: Update topics from manifest
+        uses: keyfactor/action-assign-topics@v1.2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update description from manifest
+        uses: keyfactor/action-update-description@v1.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update teams
+        uses: keyfactor/action-gh-teams-update@v1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  configure-branch:
+    name: Configure branch protection
+    if: github.event_name == 'create' && startsWith(github.ref, 'refs/heads/release-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch-protection action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: keyfactor/action-set-branch-protection
+          path: my-tools
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+      - name: Apply branch protection for ${{ github.event.ref }}
+        uses: ./my-tools
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          protect-branch: ${{ github.event.ref }}
+
+  # --- Post-release PR back to main (after a release-*.* PR is merged) ---
+  # main is a placeholder pointer to the most-recently-recorded release. The
+  # job refuses to open a PR that would move main backwards (e.g. merging 1.2.3
+  # when main already records 1.3.4) unless the merged release PR carries the
+  # 'allow-backtrack' label. This automates the old "do not approve hotfix PRs
+  # to main" rule. The PR is created with GITHUB_TOKEN and intentionally does
+  # not trigger further workflows (main runs nothing on its own).
+  post-release:
+    name: Open post-release PR to main
+    if: inputs.is_full_release == 'True'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0 # need full tag history to find main's latest release
+
+      - name: Guard against version backtrack
+        id: guard
+        env:
+          INCOMING: ${{ inputs.release_version }}
+          OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'allow-backtrack') }}
+        run: |
+          git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --force
+          # Source of truth: highest final-release (non-rc) tag reachable from main.
+          main_ver=$(git tag --merged origin/main --sort=-v:refname \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          incoming="${INCOMING#v}"
+          main_clean="${main_ver#v}"
+          echo "incoming=${incoming:-<none>} | main=${main_clean:-<none>} | override=${OVERRIDE}"
+
+          proceed=false
+          if [ -z "$main_clean" ]; then
+            proceed=true # no prior release recorded on main
+          else
+            highest=$(printf '%s\n%s\n' "$main_clean" "$incoming" | sort -V | tail -1)
+            if [ "$highest" = "$incoming" ] && [ "$incoming" != "$main_clean" ]; then
+              proceed=true
+            fi
+          fi
+
+          if [ "$proceed" != "true" ] && [ "$OVERRIDE" = "true" ]; then
+            echo "::warning::Backtrack override active: '${incoming}' does not advance main ('${main_clean}'), proceeding because the 'allow-backtrack' label is present."
+            proceed=true
+          fi
+          if [ "$proceed" != "true" ]; then
+            echo "::notice::Skipping post-release PR: '${incoming}' does not advance main ('${main_clean}'). Add the 'allow-backtrack' label to the release PR to override."
+          fi
+          echo "proceed=${proceed}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Open PR
+        if: steps.guard.outputs.proceed == 'true'
+        # GITHUB_TOKEN is sufficient: the merge-to-main PR deliberately does not
+        # need to trigger workflows. Replaces the keyfactor/action-pull-request fork.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SRC: ${{ inputs.release_branch }}
+          VER: ${{ inputs.release_version }}
+        run: |
+          if gh pr create --base main --head "$SRC" \
+               --title "Merge ${VER} to main" \
+               --body "Merge ${SRC} to main - Automated PR"; then
+            echo "Post-release PR created."
+          else
+            echo "No PR created (no diff, or a PR already exists for ${SRC})."
+          fi

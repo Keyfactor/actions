@@ -1,0 +1,91 @@
+name: Starter — Go
+# Entry point for Go integration repositories. GoReleaser handles release
+# creation, asset upload, and (config-driven) signing itself, so there is no
+# separate publish step. Validation builds use `--snapshot`; RC and full
+# releases run `release --clean` only after compliance passes.
+on:
+  workflow_call:
+    # No PAT. GoReleaser publishes with the implicit GITHUB_TOKEN.
+    # (Cross-repo/org-admin lifecycle jobs cannot run on GITHUB_TOKEN — see lifecycle.yml.)
+    secrets:
+      gpg_key:
+        description: 'GPG private key for signing Go release artifacts.'
+        required: true
+      gpg_pass:
+        description: 'GPG passphrase.'
+        required: true
+      scan_token:
+        description: 'Polaris (Black Duck) access token. If absent, the Polaris scan is skipped.'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    uses: ./.github/workflows/version.yml
+
+  compliance:
+    uses: ./.github/workflows/compliance.yml
+    secrets:
+      scan_token: ${{ secrets.scan_token }}
+
+  goreleaser:
+    name: GoReleaser
+    needs: [version, compliance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GoReleaser creates the GitHub release on the publish path
+    env:
+      IS_RELEASE_BRANCH: ${{ needs.version.outputs.IS_RELEASE_BRANCH }}
+      IS_PRE_RELEASE: ${{ needs.version.outputs.IS_PRE_RELEASE }}
+      IS_FULL_RELEASE: ${{ needs.version.outputs.IS_FULL_RELEASE }}
+      REL_VER: ${{ needs.version.outputs.release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0 # GoReleaser needs full tag history
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Determine GoReleaser mode
+        run: |
+          if [[ "$IS_RELEASE_BRANCH" == "True" && ( "$IS_PRE_RELEASE" == "True" || "$IS_FULL_RELEASE" == "True" ) ]]; then
+            echo "GO_ARGS=release --clean" | tee -a "$GITHUB_ENV"
+            echo "VERSION=${REL_VER}" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "GO_ARGS=build --snapshot" | tee -a "$GITHUB_ENV"
+            echo "VERSION=0.0.0" | tee -a "$GITHUB_ENV" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6
+        with:
+          gpg_private_key: ${{ secrets.gpg_key }}
+          passphrase: ${{ secrets.gpg_pass }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          args: ${{ env.GO_ARGS }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GPG_TTY: $(tty)
+          Version: ${{ env.VERSION }}
+
+  lifecycle:
+    needs: [version]
+    uses: ./.github/workflows/lifecycle.yml
+    with:
+      is_full_release: ${{ needs.version.outputs.IS_FULL_RELEASE }}
+      release_version: ${{ needs.version.outputs.release_version }}
+      release_branch: ${{ github.event.pull_request.base.ref }}

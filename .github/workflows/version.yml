@@ -1,0 +1,141 @@
+name: Compute release version
+# Pure, side-effect-free version computation. Produces the release/pre-release
+# version and the branch/PR flags that the starter workflows use to decide what
+# to build and whether to publish. This workflow NEVER creates a release or tag.
+on:
+  workflow_call:
+    outputs:
+      release_version:
+        description: The computed semantic version for this (pre-)release.
+        value: ${{ jobs.compute.outputs.release_version }}
+      IS_RELEASE_BRANCH:
+        description: 'True when the PR targets a release-*.* branch.'
+        value: ${{ jobs.compute.outputs.IS_RELEASE_BRANCH }}
+      IS_FULL_RELEASE:
+        description: 'True when a PR into a release-*.* branch is merged/closed.'
+        value: ${{ jobs.compute.outputs.IS_FULL_RELEASE }}
+      IS_PRE_RELEASE:
+        description: 'True while a PR into a release-*.* branch is open (RC build).'
+        value: ${{ jobs.compute.outputs.IS_PRE_RELEASE }}
+      IS_HOTFIX:
+        description: 'True when the latest repo tag is on a newer line than this branch.'
+        value: ${{ jobs.compute.outputs.IS_HOTFIX }}
+      INC_LEVEL:
+        description: 'semver increment level (patch for full release, prerelease for RC).'
+        value: ${{ jobs.compute.outputs.INC_LEVEL }}
+      PR_BASE_TAG:
+        description: 'major.minor extracted from the release-*.* base branch.'
+        value: ${{ jobs.compute.outputs.PR_BASE_TAG }}
+      LATEST_TAG:
+        description: 'The latest existing tag on this release line (empty if none).'
+        value: ${{ jobs.compute.outputs.LATEST_TAG }}
+
+permissions:
+  contents: read
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.ver.outputs.release_version }}
+      IS_RELEASE_BRANCH: ${{ steps.pr.outputs.IS_RELEASE_BRANCH }}
+      IS_FULL_RELEASE: ${{ steps.pr.outputs.IS_FULL_RELEASE }}
+      IS_PRE_RELEASE: ${{ steps.pr.outputs.IS_PRE_RELEASE }}
+      INC_LEVEL: ${{ steps.pr.outputs.INC_LEVEL }}
+      PR_BASE_TAG: ${{ steps.pr.outputs.PR_BASE_TAG }}
+      LATEST_TAG: ${{ steps.tags.outputs.LATEST_TAG }}
+      IS_HOTFIX: ${{ steps.tags.outputs.IS_HOTFIX }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0 # need full tag history to compute the next version
+          persist-credentials: false
+
+      - name: Derive PR flags
+        id: pr
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          base_tag="${PR_BASE_REF#release-}"
+          echo "PR_BASE_TAG=${base_tag}" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$PR_BASE_REF" == release-* ]]; then
+            echo "IS_RELEASE_BRANCH=True" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+          # A merged+closed PR whose merge commit is HEAD is the official release.
+          if [[ "$PR_STATE" == "closed" && "$PR_MERGED" == "true" && "$PR_COMMIT_SHA" == "$HEAD_SHA" ]]; then
+            echo "IS_FULL_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
+            echo "INC_LEVEL=patch" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+          # An open PR builds a release candidate.
+          if [[ "$PR_STATE" == "open" ]]; then
+            echo "IS_PRE_RELEASE=True" | tee -a "$GITHUB_OUTPUT"
+            echo "INC_LEVEL=prerelease" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find latest tag on this release line
+        id: tags
+        if: github.event_name == 'pull_request' && steps.pr.outputs.IS_RELEASE_BRANCH == 'True'
+        env:
+          PR_BASE_TAG: ${{ steps.pr.outputs.PR_BASE_TAG }}
+        run: |
+          git fetch --tags --force
+          if [[ -z "$(git tag)" ]]; then
+            echo "No tags exist in this repo"
+            echo "LATEST_TAG=" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          branchTagBase=$(git tag --sort=-v:refname | grep "^${PR_BASE_TAG}" | grep -o '^[0-9.]*' | head -n 1 || echo "")
+          latestTagBase=$(git tag --sort=-v:refname | grep -o '^[0-9.]*' | head -n 1)
+          latestBranchTag=$(git tag --sort=-v:refname | grep "^${PR_BASE_TAG}" | grep "^${branchTagBase}" | head -n 1 || echo "")
+          latestReleasedTag=$(git tag --sort=-v:refname | grep "^${PR_BASE_TAG}" | grep "^${branchTagBase}$" | head -n 1 || echo "")
+
+          if [[ -z "$latestReleasedTag" ]]; then
+            latestTag="$latestBranchTag"
+          else
+            latestTag="$latestReleasedTag"
+          fi
+          echo "LATEST_TAG=${latestTag}" | tee -a "$GITHUB_OUTPUT"
+
+          # Hotfix: the newest tag in the repo is on a different (newer) line than this branch.
+          if [[ "$latestTagBase" == *"$branchTagBase" ]]; then
+            echo "IS_HOTFIX=False" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "IS_HOTFIX=True" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      # keyfactor/action-bump-semver is a documented exception: it is a fork of
+      # actions-ecosystem/action-bump-semver that adds the `preID` input required
+      # to produce `-rc.N` pre-release versions. Upstream cannot reproduce this, so
+      # the fork is intentionally retained (zizmor unpinned-uses is accepted here).
+      - name: Bump existing version
+        id: bump
+        if: github.event_name == 'pull_request' && steps.pr.outputs.IS_RELEASE_BRANCH == 'True' && steps.tags.outputs.LATEST_TAG != ''
+        uses: keyfactor/action-bump-semver@v1
+        with:
+          current_version: ${{ steps.tags.outputs.LATEST_TAG }}
+          level: ${{ steps.pr.outputs.INC_LEVEL }}
+          preID: rc
+
+      - name: Determine release version
+        id: ver
+        if: github.event_name == 'pull_request' && steps.pr.outputs.IS_RELEASE_BRANCH == 'True'
+        env:
+          LATEST_TAG: ${{ steps.tags.outputs.LATEST_TAG }}
+          PR_BASE_TAG: ${{ steps.pr.outputs.PR_BASE_TAG }}
+          BUMPED: ${{ steps.bump.outputs.new_version }}
+        run: |
+          if [[ -z "$LATEST_TAG" ]]; then
+            version="${PR_BASE_TAG}.0-rc.0"
+          else
+            version="${BUMPED}"
+          fi
+          echo "release_version=${version}" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"

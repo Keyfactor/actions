@@ -1,16 +1,44 @@
-### 👨🏿‍🚀 Actions v4 Workflows
+### 👨🏿‍🚀 Actions v6 Workflows
 
-### What's new in v4
+### What's new in v6
 
-* The v4 Actions make use of [doctool](https://github.com/Keyfactor/doctool) to take Command screenshots for Universal
-  Orchestrator extension store-type creation.
+The monolithic `starter.yml` has been split into three focused, self-contained entry points and a
+small set of shared building blocks:
+
+| Entry point | For |
+|-------------|-----|
+| [`starter-dotnet.yml`](.github/workflows/starter-dotnet.yml) | .NET integrations (build, sign, package, release) |
+| [`starter-golang.yml`](.github/workflows/starter-golang.yml) | Go integrations (GoReleaser) |
+| [`starter-helm.yml`](.github/workflows/starter-helm.yml) | Container + Helm chart integrations |
+
+Each entry point composes four reusable building blocks:
+
+* [`version.yml`](.github/workflows/version.yml) — pure, side-effect-free computation of the
+  release/pre-release version and branch flags. **Never** creates a release or tag.
+* [`compliance.yml`](.github/workflows/compliance.yml) — one-shot pre-release gate: Apache license
+  headers, TODO report, and the Polaris (Black Duck) SCA/SAST scan.
+* [`lifecycle.yml`](.github/workflows/lifecycle.yml) — repo housekeeping (README via doctool,
+  integrations-catalog update, release-branch configuration, and the post-release PR to `main`),
+  each job self-gated on the triggering event.
+* [`publish-release.yml`](.github/workflows/publish-release.yml) — creates the GitHub release **and**
+  attaches build artifacts atomically.
+
+#### Key behavioral change
+
+Publishing (an RC on an open PR, or the full release on merge) now **depends on** the build and
+compliance jobs succeeding. A release can no longer be created before the checks that protect it
+have passed. RCs continue to publish on every open PR to a `release-*.*` branch, exactly as before —
+they just publish *after* the build and compliance run rather than ahead of it.
 
 ### Usage
 
 #### Prerequisites
 
-- Ensure an `integration-manifest.json` file is present in the root of your repository. For the schema, see the
-  v2 [integration-manifest-schema.json](https://keyfactor.github.io/v2/integration-manifest-schema.json)
+- Ensure an `integration-manifest.json` file is present in the root of your repository. For the
+  schema, see the v2
+  [integration-manifest-schema.json](https://keyfactor.github.io/v2/integration-manifest-schema.json).
+  The .NET build reads `release_dir` and `release_project` from it directly; the catalog update reads
+  `update_catalog`; the Helm build reads `platform_matrix`.
 
 #### Example `integration-manifest.json`
 
@@ -26,65 +54,13 @@
   "description": "Example Plugin for the AnyCA REST Gateway framework",
   "gateway_framework": "25.0.0",
   "release_dir": "example-caplugin\\bin\\Release",
-  "release_project": "example-caplugin\\example_extension.csproj",
-  "about": {
-    "carest": {
-      "ca_plugin_config": [
-        {
-          "name": "ApiKey",
-          "description": "The API Key for the The CA API"
-        },
-        {
-          "name": "Username",
-          "description": "Username for the CA API service account"
-        },
-        {
-          "name": "Password",
-          "description": "Password for the CA API service account"
-        },
-        {
-          "name": "BaseUrl",
-          "description": "The Base URL for the CA API"
-        },
-        {
-          "name": "Enabled",
-          "description": "Flag to Enable or Disable gateway functionality. Disabling is primarily used to allow creation of the CA prior to configuration information being available."
-        }
-      ],
-      "enrollment_config": [
-        {
-          "name": "CertificateValidityInYears",
-          "description": "Number of years the certificate will be valid for"
-        },
-        {
-          "name": "Email",
-          "description": "Email address of the requestor"
-        },
-        {
-          "name": "OrganizationName",
-          "description": "Name of the organization to be validated against"
-        }
-      ],
-      "product_ids": [
-        "ExampleProductSslOvBasic",
-        "ExampleProductSslEvBasic",
-        "ExampleProductSslDvGeotrust",
-        "ExampleProductSslDvThawte",
-        "ExampleProductSslOvThawteWebserver",
-        "ExampleProductSslEvThawteWebserver",
-        "ExampleProductSslOvGeotrustTruebizid",
-        "ExampleProductSslEvGeotrustTruebizid",
-        "ExampleProductSslOvSecuresite",
-        "ExampleProductSslEvSecuresite",
-        "ExampleProductSslOvSecuresitePro",
-        "ExampleProductSslEvSecuresitePro"
-      ]
-    }
-  }
+  "release_project": "example-caplugin\\example_extension.csproj"
 }
 ```
 
-#### Example workflow `keyfactor-bootsrap-workflow.yml`
+#### Example bootstrap workflow (`.github/workflows/keyfactor-bootstrap-workflow.yml`)
+
+Call the entry point matching your project. For a .NET integration:
 
 ```yaml
 name: Keyfactor Bootstrap Workflow
@@ -100,91 +76,77 @@ on:
 
 jobs:
   call-starter-workflow:
-    uses: keyfactor/actions/.github/workflows/starter.yml@v4
-    with:
-      command_token_url: ${{ vars.COMMAND_TOKEN_URL }} # Only required for doctool generated screenshots
-      command_hostname: ${{ vars.COMMAND_HOSTNAME }} # Only required for doctool generated screenshots
-      command_base_api_path: ${{ vars.COMMAND_API_PATH }} # Only required for doctool generated screenshots
+    uses: keyfactor/actions/.github/workflows/starter-dotnet.yml@v6
     secrets:
-      token: ${{ secrets.V2BUILDTOKEN}} # REQUIRED
-      gpg_key: ${{ secrets.KF_GPG_PRIVATE_KEY }} # Only required for golang builds
-      gpg_pass: ${{ secrets.KF_GPG_PASSPHRASE }} # Only required for golang builds
-      scan_token: ${{ secrets.SAST_TOKEN }} # REQUIRED
-      entra_username: ${{ secrets.DOCTOOL_ENTRA_USERNAME }} # Only required for doctool generated screenshots
-      entra_password: ${{ secrets.DOCTOOL_ENTRA_PASSWD }} # Only required for doctool generated screenshots
-      command_client_id: ${{ secrets.COMMAND_CLIENT_ID }} # Only required for doctool generated screenshots
-      command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }} # Only required for doctool generated screenshots
-
+      scan_token: ${{ secrets.SAST_TOKEN }}      # Optional — Polaris scan (skipped if absent)
+      # signing_cert: ${{ secrets.SIGNING_CERT }}  # Reserved — code signing is not yet wired
+      # signing_pass: ${{ secrets.SIGNING_PASS }}
 ```
 
-#### Inputs
+For Go, call `starter-golang.yml@v6` and additionally pass `gpg_key` / `gpg_pass`. For
+container/Helm, call `starter-helm.yml@v6` and pass `docker_user` / `docker_token`.
 
-| Parameter             | Type   | Description                                                    | Required/Optional              |
-|-----------------------|--------|----------------------------------------------------------------|--------------------------------|
-| command_token_url     | Input  | URL for command token, used by doctool for screenshots         | Optional (doctool screenshots) |
-| command_hostname      | Input  | Hostname for command, used by doctool for screenshots          | Optional (doctool screenshots) |
-| command_base_api_path | Input  | Base API path for command, used by doctool for screenshots     | Optional (doctool screenshots) |
-| token                 | Secret | Build token for workflow execution                             | Required                       |
-| gpg_key               | Secret | GPG private key for signing golang builds                      | Optional (golang builds)       |
-| gpg_pass              | Secret | GPG passphrase for signing golang builds                       | Optional (golang builds)       |
-| scan_token            | Secret | Token for SAST/Polaris scan                                    | Required                       |
-| entra_username        | Secret | Username for doctool Entra authentication (screenshots)        | Optional (doctool screenshots) |
-| entra_password        | Secret | Password for doctool Entra authentication (screenshots)        | Optional (doctool screenshots) |
-| command_client_id     | Secret | Client ID for command API, used by doctool for screenshots     | Optional (doctool screenshots) |
-| command_client_secret | Secret | Client secret for command API, used by doctool for screenshots | Optional (doctool screenshots) |
+**No PAT.** These workflows use the implicit `GITHUB_TOKEN` for everything they can — NuGet restore
+(`packages: read`; the Keyfactor packages must grant Actions access to the integration repo),
+release publishing, GoReleaser, image push, and the post-release PR. There is no `token` secret.
 
-### 🚀The Bootstrap workflow for v4 Actions perform the following steps:
+> ⚠️ The cross-repo / org-admin lifecycle jobs **cannot** run on `GITHUB_TOKEN` and are retained as
+> placeholders that will fail until their structural replacements land: **doctool** README generation
+> (reads the private `keyfactor/doctooldotnet` repo), the **catalog** update (writes another repo —
+> being moved to a pull-model workflow in the catalog repo), and **configure-repo/branch** (topics,
+> description, teams, branch protection require org admin scopes `GITHUB_TOKEN` does not have). See
+> the per-job notes in [lifecycle.yml](.github/workflows/lifecycle.yml).
 
-* Checkout integration repository
-* Call [starter.yml](.github/workflows/starter.yml) workflow
-* Get values from integration-manifest.json [assign-env-from-json](.github/workflows/assign-env-from-json.yml)
-* Discover primary programming language from the repository [***action-get-primary-language***]
-* Determine event_name:
-  `create, push, pull_request, workflow_dispatch` [github-release.yml](.github/workflows/github-release.yml)
-* Run the workflows and conditionalized steps to produce a build. If conditions match, release artifacts are delivered
-  [dotnet-build-and-release.yml](.github/workflows/dotnet-build-and-release.yml)
-  or [go-build-and-release.yml](.github/workflows/go-build-and-release.yml)
-  workflow will be run depending on the `detected-primary-language` step in [starter.yml](.github/workflows/starter.yml)
+#### Secrets
 
-#### On Create:
+| Secret        | Used by                       | Required/Optional                       |
+|---------------|-------------------------------|-----------------------------------------|
+| scan_token    | all (compliance / Polaris)    | Optional (scan skipped if absent)       |
+| gpg_key       | golang                        | Required for Go                         |
+| gpg_pass      | golang                        | Required for Go                         |
+| docker_user   | helm                          | Optional (image push)                   |
+| docker_token  | helm                          | Optional (image push)                   |
+| signing_cert  | dotnet                        | Reserved — signing not yet wired        |
+| signing_pass  | dotnet                        | Reserved — signing not yet wired        |
 
-* Configure repository settings - This will use the properties from the json to update topic and description, and will
-  set the teams permissions on the repo accordingly. If the ref created is a branch that matches "release-\*.\*", branch
-  protection is added, autlink reference set ab# to devops [***kf-configure-repo***]
+### Behavior by event
 
-#### On push or workflow_dispatch:
+#### On `create` of a `release-*.*` branch
+Configure repository settings — topics and description from the manifest, team permissions, and
+branch protection ([`lifecycle.yml`](.github/workflows/lifecycle.yml) `configure-*` jobs).
 
-* Just run the build on the branch with the commit without producing release artifacts
-*
-    * C#: run the [dotnet-build-and-release.yml](.github/workflows/dotnet-build-and-release.yml) workflow
-*
-    * Go builds: run the go-build-and-release.yml workflow (still in progress)
-* All languages:
-*
-    * Generate/Update `README.md` using `doctool` [generate-readme.yml](.github/workflows/generate-readme.yml)
-*
-    * (conditionally) a catalog entry [update-catalog](.github/workflows/update-catalog.yml) will be created/updated if
-      the json manifest has `"update_catalog": true` in the `integration-manifest.json` file
+#### On `push` (non-`main`) or `workflow_dispatch`
+Build and run compliance as validation; regenerate `README.md` via doctool. No release is published.
 
-#### On pull_request[opened, closed, synchronize, edited, reopened]:
+#### On `push` to `main`
+If `"update_catalog": true`, create/update the integrations-catalog entry.
 
-[dotnet-build-and-release.yml](.github/workflows/dotnet-build-and-release.yml) workflow
-or [go-build-and-release.yml](.github/workflows/go-build-and-release.yml) workflow will be run depending on the detected
-primary language
+#### On `pull_request` to a `release-*.*` branch
+* **Open / synchronize:** build → compliance → publish a `-rc.N` **prerelease** (unsigned for now).
+* **Merged / closed:** build → compliance → **signing stage** (dotnet, full release only) → publish
+  the final release, then open an automated PR back to `main` (approve manually).
 
-* If the pr destination is a `release-*.*` branch, set flags to produce release artifacts
-* If the pr is determined to be `open` or `merged` but not `closed` (synchronize), a prerelease artifact will be
-  uploaded
-* If the pr is determined to be `merged` and `closed`, a final "official" release is built and published to GitHub
-  releases, and if `"update_catalog": true` is set in the json manifest, a catalog entry will be created/updated
-* Polaris SAST/SCAN scans run when push to `release-*` or main occurs
-* If PR to release branch is `merged/closed`, a new PR will be automatically generated. This will need to be approved
-  manually and **should not** be approved for hotfix branches
+`main` is a placeholder that records the most-recently-released version. The post-release job will
+**not** open a PR that moves `main` backwards (e.g. merging `1.2.3` when `main` already records
+`1.3.4`) — it compares the release against the highest release tag reachable from `main`. To merge an
+intentional older-line hotfix to `main` anyway, add the `allow-backtrack` label to the release PR.
 
-### 📝Todo:
+### Supply chain
 
-* Remove default admin user when applying branch protection
-* Add overrides for detected language, readme build(?), etc. into json manifest
-* Set repo license
+Third-party actions are pinned to full commit SHAs with `# vX.Y.Z` comments. The only retained
+`keyfactor/*` references are first-party actions (`action-assign-topics`, `action-update-description`,
+`action-gh-teams-update`, `action-set-branch-protection`, `doctooldotnet`) plus two documented
+exceptions that diverge from upstream: `keyfactor/action-bump-semver` (adds a `preID` input) and
+`Keyfactor/jinja2-action` (custom multi-data-file support).
+
+### 📝 Todo
+
+* Wire up the .NET binary signing stage (`signing_cert` / `signing_pass`) in
+  [`starter-dotnet.yml`](.github/workflows/starter-dotnet.yml).
+* Upstream-or-replace the forked actions still used by the self-hosted
+  [`keyfactor-sign-files.yml`](.github/workflows/keyfactor-sign-files.yml)
+  (`find-latest-tag`, `release-downloader`, `release-action`).
+* Remove default admin user when applying branch protection.
+* Set repo license.
 
 ---
