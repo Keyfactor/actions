@@ -115,8 +115,65 @@ jobs:
         run:
           echo "platform_matrix=`cat integration-manifest.json | jq '.platform_matrix'`" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
+  # ---------------------------------------------------------------------------
+  # Build phase: prepare -> [dotnet | go | other] build -> release
+  #
+  # Exactly one of the three build jobs below runs, based on the detected
+  # language. Each compiles/validates the project WITHOUT creating or uploading
+  # to a release (no release_url/release_version is passed). The release job
+  # then waits on all three, so a build failure blocks the release. The "other"
+  # job is a no-op that guarantees there is always a build step before release.
+  # ---------------------------------------------------------------------------
+
+  # .NET path: compile the assembly to validate the build.
+  call-dotnet-build-validation-workflow:
+    needs: [ check-token-workflow, call-get-primary-language, call-assign-from-json-workflow ]
+    if: needs.call-get-primary-language.outputs.primary_language == 'C#'
+    uses: keyfactor/actions/.github/workflows/dotnet-build-and-release.yml@v4
+    with:
+      release_dir: ${{ needs.call-assign-from-json-workflow.outputs.release_dir }}
+      release_project: ${{ needs.call-assign-from-json-workflow.outputs.release_project }}
+      integration_type: ${{ needs.call-assign-from-json-workflow.outputs.integration_type }}
+    secrets:
+      token: ${{ secrets.token }}
+
+  # Go path: with no release_version, goreleaser runs `build --snapshot`, which
+  # validates the build without producing a release.
+  call-go-build-validation-workflow:
+    needs: [ check-token-workflow, call-get-primary-language, call-goreleaser-exists ]
+    if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true'
+    uses: keyfactor/actions/.github/workflows/go-build-and-release.yml@v4
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+      gpg_key: ${{ secrets.gpg_key }}
+      gpg_pass: ${{ secrets.gpg_pass }}
+
+  # Other path: no build to perform, but keep a step before release so the
+  # prepare -> build -> release shape holds for every project type.
+  build-other:
+    needs: [ check-token-workflow, call-get-primary-language, call-goreleaser-exists ]
+    if: |
+      needs.call-get-primary-language.outputs.primary_language != 'C#' &&
+      !(needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: No build required
+        run: echo "No language-specific build for primary language '${{ needs.call-get-primary-language.outputs.primary_language }}'; proceeding to release."
+
   call-create-github-release-workflow:
-    needs: check-token-workflow
+    needs:
+      - check-token-workflow
+      - call-dotnet-build-validation-workflow
+      - call-go-build-validation-workflow
+      - build-other
+    # Run once the build phase has passed. Exactly one build job runs; the
+    # others are skipped, and a skipped build must not block the release.
+    if: |
+      always() &&
+      needs.check-token-workflow.result == 'success' &&
+      (needs.call-dotnet-build-validation-workflow.result == 'success' || needs.call-dotnet-build-validation-workflow.result == 'skipped') &&
+      (needs.call-go-build-validation-workflow.result == 'success' || needs.call-go-build-validation-workflow.result == 'skipped') &&
+      (needs.build-other.result == 'success' || needs.build-other.result == 'skipped')
     uses: Keyfactor/actions/.github/workflows/github-release.yml@v4
 
   call-dotnet-build-and-release-workflow:
