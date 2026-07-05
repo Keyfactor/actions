@@ -21,7 +21,7 @@ jobs:
           path: './catalog-temp/'
           repository: 'Keyfactor/integrations-catalog' # Change back to integrations-catalog after testing
       
-      - uses: Keyfactor/jinja2-action@v1.2.0-multiple-data-files
+      - uses: Keyfactor/jinja2-action@v2-tests
         with:
           template: ./catalog-temp/_integration.md.tpl
           output_file: ${{ format('./catalog-temp/_integrations/{0}.md', github.event.repository.name) }}
