@@ -9,14 +9,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check for TODO statements
         run: (find . -iname "*.cs" "*.go" -exec grep -qi "todo" {} \; -print) | tee ./todo_log.txt
 
       - name: Save todo log
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: todologs  
           path: ./**/todo_log.txt 
@@ -26,7 +26,7 @@ jobs:
 
       - name: Save license log
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: licenselogs  
           path: ./**/license_log.txt  

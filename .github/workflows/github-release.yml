@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Display base.ref from Pull Request
         if: github.event_name == 'pull_request'
