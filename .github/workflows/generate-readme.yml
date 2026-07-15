@@ -39,7 +39,7 @@ jobs:
     name: Use private doctool action in public repository
     steps:
       - name: checkout-action
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           repository: keyfactor/doctool
           path: doctool

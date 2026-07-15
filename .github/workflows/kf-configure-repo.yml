@@ -24,7 +24,7 @@ jobs:
     name: Updating repository settings
     steps:
       - name: Checkout
-        uses: keyfactor/checkout@v4
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.token}}
       - name: Update topic from manifest:integration_type
@@ -47,7 +47,7 @@ jobs:
     name: Configure branch protection
     steps:
     - name: Checkout tools repo
-      uses: keyfactor/checkout@v4
+      uses: actions/checkout@v4
       with:
         repository: keyfactor/action-set-branch-protection
         path: my-tools
