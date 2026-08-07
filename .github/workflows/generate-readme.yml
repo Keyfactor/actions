@@ -3,10 +3,10 @@ on:
   workflow_call:
     inputs:
       doctool-ref:
-        description: 'Git ref (tag/branch/commit) of keyfactor/doctooldotnet to run. Pinned to a known-good commit by default so doctool changes cannot silently alter generated docs; bump deliberately.'
+        description: 'Git ref (tag/branch/commit) of keyfactor/doctooldotnet to run. Defaults to main; override to pin to a specific commit/tag if needed.'
         type: string
         required: false
-        default: '031c69536c678c149ac70c4408caf13306852f22'
+        default: 'main'
     secrets:
       token:
         description: 'Secret token from caller workflow to approve readme'
