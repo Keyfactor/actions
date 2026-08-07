@@ -1,6 +1,12 @@
 name: Generate README from templates and data files using doctool
 on:
   workflow_call:
+    inputs:
+      doctool-ref:
+        description: 'Git ref (tag/branch/commit) of keyfactor/doctooldotnet to run. Pinned to a known-good commit by default so doctool changes cannot silently alter generated docs; bump deliberately.'
+        type: string
+        required: false
+        default: '031c69536c678c149ac70c4408caf13306852f22'
     secrets:
       token:
         description: 'Secret token from caller workflow to approve readme'
@@ -23,6 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: keyfactor/doctooldotnet
+          ref: ${{ inputs.doctool-ref }}
           path: doctooldotnet
           token: ${{ secrets.token }}
           clean: false
