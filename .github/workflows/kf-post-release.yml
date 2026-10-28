@@ -25,11 +25,6 @@ jobs:
         with:
           fetch-depth: 0
           # fetch-depth added: https://github.com/devops-infra/action-pull-request/issues/51
-      # - name: Remove prereleases
-      #   uses: Keyfactor/action-delete-prereleases@versioned-prereleases
-      #   with:
-      #     repo-token: ${{ secrets.token }}
-      #     release_version: ${{ inputs.release_version }}
 
       - name: Create PR to main
         uses: Keyfactor/action-pull-request@v0.5.5
@@ -40,3 +35,55 @@ jobs:
           allow_no_diff: true
           title: Merge ${{ inputs.release_version }} to main
           body: "Merge ${{ inputs.branchname }} to main - Automated PR"
+
+      # Runs after the PR step so a cleanup failure cannot block the merge back to main.
+      # Deletes the rc builds superseded by this release; the git tags are left in place
+      # because github-release.yml computes the next version from `git tag` output.
+      - name: Remove superseded prereleases
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASED_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+
+          # Without a well-formed released version there is no basis for comparison,
+          # so delete nothing.
+          if [[ ! "$RELEASED_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::warning::release_version '$RELEASED_VERSION' is not MAJOR.MINOR.PATCH; skipping prerelease cleanup."
+            exit 0
+          fi
+          released=$(printf '%05d%05d%05d' "${BASH_REMATCH[@]:1:3}")
+
+          echo "### Prerelease cleanup for $RELEASED_VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # Assigned before the loop rather than piped into it, so a failed API call aborts
+          # the step instead of reading as "no prereleases found".
+          prereleases=$(gh api --paginate "repos/$GH_REPO/releases" \
+            --jq '.[] | select(.prerelease) | .tag_name')
+
+          deleted=0 failed=0
+          while read -r tag; do
+            # Only the bare semver rc builds produced by github-release.yml.
+            [[ "$tag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-rc\.[0-9]+$ ]] || continue
+            candidate=$(printf '%05d%05d%05d' "${BASH_REMATCH[@]:1:3}")
+
+            # A prerelease of the released version sorts below it, so <= sweeps the rc builds
+            # that led to this release plus every older line, while leaving an in-flight
+            # higher version (e.g. 5.0.0-rc.0 during a 4.0.1 hotfix) untouched.
+            # 10# is required: printf zero-pads, and bash reads a leading-zero literal as octal.
+            if (( 10#$candidate <= 10#$released )); then
+              if gh release delete "$tag" --yes; then
+                echo "- deleted \`$tag\`" | tee -a "$GITHUB_STEP_SUMMARY"
+                deleted=$((deleted + 1))
+              else
+                echo "::warning::failed to delete $tag"
+                failed=$((failed + 1))
+              fi
+            else
+              echo "- kept \`$tag\` (newer than $RELEASED_VERSION)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done <<< "$prereleases"
+
+          echo "Deleted $deleted prerelease(s), $failed failure(s)." | tee -a "$GITHUB_STEP_SUMMARY"
+          (( failed == 0 ))

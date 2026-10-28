@@ -1,9 +1,12 @@
-### 👨🏿‍🚀 Actions v4 Workflows
+# 👨🏿‍🚀 Actions v5 Workflows
 
-### What's new in v4
+### What's new in v5
 
-* The v4 Actions make use of [doctool](https://github.com/Keyfactor/doctool) to take Command screenshots for Universal
-  Orchestrator extension store-type creation.
+* Command screenshots for Universal Orchestrator extension store-type creation are now taken by the .NET
+  [doctooldotnet](https://github.com/Keyfactor/doctooldotnet) action, replacing the previous `doctool` action.
+* .NET 10 builds are supported.
+* Release-candidate prereleases are removed automatically once the final release is published. See
+  [On pull_request](#on-pull_requestopened-closed-synchronize-edited-reopened).
 
 ### Usage
 
@@ -100,7 +103,7 @@ on:
 
 jobs:
   call-starter-workflow:
-    uses: keyfactor/actions/.github/workflows/starter.yml@v4
+    uses: keyfactor/actions/.github/workflows/starter.yml@v5
     with:
       command_token_url: ${{ vars.COMMAND_TOKEN_URL }} # Only required for doctool generated screenshots
       command_hostname: ${{ vars.COMMAND_HOSTNAME }} # Only required for doctool generated screenshots
@@ -133,7 +136,7 @@ jobs:
 | command_client_id     | Secret | Client ID for command API, used by doctool for screenshots     | Optional (doctool screenshots) |
 | command_client_secret | Secret | Client secret for command API, used by doctool for screenshots | Optional (doctool screenshots) |
 
-### 🚀The Bootstrap workflow for v4 Actions perform the following steps:
+### 🚀The Bootstrap workflow for v5 Actions perform the following steps:
 
 * Checkout integration repository
 * Call [starter.yml](.github/workflows/starter.yml) workflow
@@ -177,7 +180,12 @@ primary language
   uploaded
 * If the pr is determined to be `merged` and `closed`, a final "official" release is built and published to GitHub
   releases, and if `"update_catalog": true` is set in the json manifest, a catalog entry will be created/updated
-* Polaris SAST/SCAN scans run when push to `release-*` or main occurs
+* After a final release is published, the release-candidate prereleases it supersedes are deleted
+  [kf-post-release.yml](.github/workflows/kf-post-release.yml). Only prereleases at or below the released version are
+  removed, so a release candidate for a *later* version (for example `5.0.0-rc.0` during a `4.0.1` hotfix) is kept. The
+  git tags are left in place, and full releases are never touched.
+* Polaris SAST/SCAN scans are currently disabled — the `call-polaris-scan-workflow` call site in
+  [starter.yml](.github/workflows/starter.yml) is commented out
 * If PR to release branch is `merged/closed`, a new PR will be automatically generated. This will need to be approved
   manually and **should not** be approved for hotfix branches
 
