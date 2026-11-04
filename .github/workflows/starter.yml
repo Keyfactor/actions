@@ -116,6 +116,41 @@ jobs:
     secrets:
       token: ${{ secrets.token  }}
 
+  call-sign:
+    needs: call-dotnet-build-and-release-workflow
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && (
+        (github.event.action != 'closed' && startsWith(github.base_ref, 'release-')) ||
+        (github.event.action == 'closed' && github.event.pull_request.merged == true &&
+          startsWith(github.base_ref, 'release-'))
+      ))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch codesigning
+        env:
+          GH_TOKEN: ${{ secrets.token  }}
+          REPO: ${{ github.repository }}
+        run: |
+          # newest release (pre-releases included) is the one this run just built
+          tag=$(gh release list -R "$REPO" -L 1 --json tagName --jq '.[0].tagName')
+          if [ -z "$tag" ]; then
+            echo "::error::No release found for $REPO"
+            exit 1
+          fi
+
+          # the signer downloads every *.zip, so never run it on an already signed release
+          if gh release view "$tag" -R "$REPO" --json assets --jq '.assets[].name' | grep -q '_signed\.zip$'; then
+            echo "Release $tag already has signed assets, skipping"
+            exit 0
+          fi
+
+          echo "Dispatching signing for $tag"
+          gh workflow run new-sign.yml \
+            -R Keyfactor/integration-codesigning \
+            -f targetRepo=${{ github.event.repository.name }} \
+            -f targetTag="$tag"
+
   call-go-build-and-release-workflow:
     needs: [ call-get-primary-language, call-assign-from-json-workflow, call-create-github-release-workflow,call-goreleaser-exists ]
     if: needs.call-get-primary-language.outputs.primary_language == 'Go' && needs.call-goreleaser-exists.outputs.goreleaser-exists == 'true'
