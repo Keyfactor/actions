@@ -1,0 +1,257 @@
+# Reusable workflow that bootstraps an integration repository onto dotnet-ci.yml.
+#
+# It renders the caller stub into the target repository as
+# .github/workflows/dotnet-ci.yml and opens a pull request with it. Run it once per
+# integration repository; running it again is a no-op unless the stub has changed, in
+# which case it refreshes the branch and the PR.
+#
+# The stub is rendered from repo-workflows/examples/dotnet-ci-caller.yml in
+# Keyfactor/actions rather than being duplicated here, so the example a human reads and
+# the file this writes cannot drift apart.
+#
+# TOKEN SCOPE: `secrets.token` must be a PAT carrying the `workflow` scope. The default
+# GITHUB_TOKEN is refused by the API when a push creates or updates any file under
+# .github/workflows/, so bootstrapping cannot work with it.
+
+name: Bootstrap .NET CI
+
+on:
+  workflow_call:
+    inputs:
+      ci_ref:
+        description: >-
+          Ref of Keyfactor/actions to take the caller stub from, and to pin the generated
+          `uses:` to. Keep these the same so a repository is bootstrapped onto the same
+          version of the workflow it was templated from.
+        type: string
+        required: false
+        default: v5
+      secret_name:
+        description: 'Name of the repository/organization secret the generated caller passes as `token`.'
+        type: string
+        required: false
+        default: V2BUILDTOKEN
+      branch:
+        description: 'Branch to push the generated workflow to.'
+        type: string
+        required: false
+        default: bootstrap/dotnet-ci
+      workflow_path:
+        description: 'Path the caller workflow is written to in the target repository.'
+        type: string
+        required: false
+        default: .github/workflows/dotnet-ci.yml
+    secrets:
+      token:
+        description: 'PAT with `workflow` scope; GITHUB_TOKEN cannot write .github/workflows/.'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Bootstrap repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+          fetch-depth: 0
+
+      - name: Checkout caller stub template
+        uses: actions/checkout@v4
+        with:
+          repository: Keyfactor/actions
+          ref: ${{ inputs.ci_ref }}
+          path: .keyfactor-actions
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Advisory only. A repository is often bootstrapped before it is actually ready to
+      # build, so none of this fails the run; it just says what will need fixing before
+      # the generated workflow goes green.
+      - name: Check repository readiness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $notes = [System.Collections.Generic.List[string]]::new()
+          $notes.Add('### Repository readiness')
+
+          $manifest = Join-Path $env:GITHUB_WORKSPACE 'integration-manifest.json'
+          if (Test-Path -LiteralPath $manifest) {
+            $notes.Add('* integration-manifest.json &colon; present')
+            try {
+              $parsed = Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
+              foreach ($name in @('release_dir', 'release_project')) {
+                $property = $parsed.PSObject.Properties[$name]
+                if ($null -eq $property -or [string]::IsNullOrWhiteSpace($property.Value)) {
+                  $notes.Add("* ``$name`` &colon; **missing** - the build cannot package a release without it")
+                  Write-Host "::warning::integration-manifest.json is missing '$name'"
+                } else {
+                  $notes.Add("* ``$name`` &colon; $($property.Value)")
+                }
+              }
+            } catch {
+              $notes.Add('* integration-manifest.json &colon; **does not parse as JSON**')
+              Write-Host "::warning::integration-manifest.json does not parse: $($_.Exception.Message)"
+            }
+          } else {
+            $notes.Add('* integration-manifest.json &colon; **absent** - add one before the workflow can run')
+            Write-Host '::warning::integration-manifest.json not found in the repository root'
+          }
+
+          $solutions = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter '*.sln' -File -Recurse)
+          if ($solutions.Count -eq 1) {
+            $notes.Add("* solution &colon; $($solutions[0].Name)")
+          } elseif ($solutions.Count -eq 0) {
+            $notes.Add('* solution &colon; **none found** - the build expects exactly one .sln')
+            Write-Host '::warning::no .sln found; the build job expects exactly one'
+          } else {
+            $notes.Add("* solution &colon; **$($solutions.Count) found** - the build expects exactly one .sln")
+            Write-Host "::warning::found $($solutions.Count) .sln files; the build job expects exactly one"
+          }
+
+          $notes | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Render caller workflow
+        id: render
+        shell: pwsh
+        env:
+          CI_REF: ${{ inputs.ci_ref }}
+          SECRET_NAME: ${{ inputs.secret_name }}
+          WORKFLOW_PATH: ${{ inputs.workflow_path }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $templatePath = Join-Path $env:GITHUB_WORKSPACE '.keyfactor-actions/repo-workflows/examples/dotnet-ci-caller.yml'
+          if (-not (Test-Path -LiteralPath $templatePath)) {
+            Write-Error "Caller stub template not found at $templatePath (ref '$($env:CI_REF)')."
+          }
+          $content = Get-Content -LiteralPath $templatePath -Raw
+
+          # Each substitution is asserted rather than applied blindly, so a rename in the
+          # template surfaces here instead of silently writing a workflow that points at
+          # the wrong ref or the wrong secret.
+          $substitutions = @(
+            @{
+              Name        = 'header comment'
+              Pattern     = '(?m)^# Copy this into an integration repository as \.github/workflows/dotnet-ci\.yml\.$'
+              Replacement = "# Generated by Keyfactor/actions bootstrap-dotnet-ci.yml from`n" +
+                            "# repo-workflows/examples/dotnet-ci-caller.yml@$($env:CI_REF).`n" +
+                            "# Re-run that workflow to refresh it; edits made here will show up as a diff in`n" +
+                            "# the refresh pull request rather than being silently kept."
+            },
+            @{
+              Name        = 'workflow ref'
+              Pattern     = '(?m)(dotnet-ci\.yml)@v5$'
+              Replacement = "`$1@$($env:CI_REF)"
+            },
+            @{
+              Name        = 'secret name'
+              Pattern     = 'secrets\.V2BUILDTOKEN'
+              Replacement = "secrets.$($env:SECRET_NAME)"
+            }
+          )
+
+          foreach ($substitution in $substitutions) {
+            if ($content -notmatch $substitution.Pattern) {
+              Write-Error "Template substitution '$($substitution.Name)' found nothing to replace. The caller stub at ref '$($env:CI_REF)' has changed shape; bootstrap-dotnet-ci.yml needs updating."
+            }
+            $content = $content -replace $substitution.Pattern, $substitution.Replacement
+          }
+
+          $target = Join-Path $env:GITHUB_WORKSPACE $env:WORKFLOW_PATH
+          $existing = ''
+          if (Test-Path -LiteralPath $target) {
+            $existing = Get-Content -LiteralPath $target -Raw
+          }
+
+          # Compare with line endings and trailing whitespace normalized so a checkout's
+          # autocrlf settings cannot read as a change.
+          $normalize = { param([string]$Text) ($Text -replace "`r`n", "`n").TrimEnd() }
+          if ((& $normalize $existing) -eq (& $normalize $content)) {
+            Write-Host "$($env:WORKFLOW_PATH) is already up to date."
+            'changed=false' | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+            "``$($env:WORKFLOW_PATH)`` is already up to date; nothing to do." |
+              Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+            return
+          }
+
+          $targetDir = Split-Path -Parent $target
+          if (-not (Test-Path -LiteralPath $targetDir)) {
+            New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+          }
+          # -NoNewline with an explicit trailing newline: Set-Content would otherwise add a
+          # platform-dependent one.
+          Set-Content -LiteralPath $target -Value ($content.TrimEnd() + "`n") -NoNewline
+
+          $action = if ($existing) { 'updated' } else { 'created' }
+          Write-Host "$action $($env:WORKFLOW_PATH)"
+          'changed=true' | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          "action=$action" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+
+      - name: Push branch and open pull request
+        if: steps.render.outputs.changed == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ inputs.branch }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          WORKFLOW_PATH: ${{ inputs.workflow_path }}
+          CI_REF: ${{ inputs.ci_ref }}
+          ACTION: ${{ steps.render.outputs.action }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # The bootstrap branch is machine-owned, so it is always reset to the current
+          # base rather than merged into, keeping the diff to just this file.
+          git checkout -B $env:BRANCH
+          git add -- $env:WORKFLOW_PATH
+          git commit -m "ci: $($env:ACTION) $($env:WORKFLOW_PATH) from Keyfactor/actions@$($env:CI_REF)"
+          git push --force origin "$($env:BRANCH)"
+
+          $existingPr = @(gh pr list --head $env:BRANCH --state open --json number --jq '.[].number')
+          if ($existingPr.Count -gt 0) {
+            Write-Host "Pull request #$($existingPr[0]) already open for $($env:BRANCH); it now carries the refreshed file."
+            "Refreshed existing pull request #$($existingPr[0])." |
+              Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+            return
+          }
+
+          $body = @(
+            'Adds the caller workflow that puts this repository on the shared .NET CI/release'
+            "pipeline, ``Keyfactor/actions/.github/workflows/dotnet-ci.yml@$($env:CI_REF)``."
+            ''
+            'The concurrency group lives in this file rather than in the reusable workflow,'
+            'because GitHub resolves `github.workflow` inside a called workflow to the'
+            "caller's name and documents that sharing a group expression between the two can"
+            'cancel the caller.'
+            ''
+            "Check the bootstrap run's summary for anything this repository still needs before"
+            'the pipeline will go green, such as a missing `release_dir` or `release_project`.'
+            ''
+            'Generated by `bootstrap-dotnet-ci.yml`.'
+          ) -join "`n"
+
+          gh pr create `
+            --base $env:BASE_BRANCH `
+            --head $env:BRANCH `
+            --title "ci: adopt shared .NET CI workflow" `
+            --body $body
+
+          $url = gh pr view $env:BRANCH --json url --jq '.url'
+          "Opened pull request &colon; $url" | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY

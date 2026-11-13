@@ -1,0 +1,39 @@
+# Caller stub for Keyfactor/actions/.github/workflows/dotnet-ci.yml.
+# Copy this into an integration repository as .github/workflows/dotnet-ci.yml.
+#
+# The concurrency group lives here, not in the reusable workflow. GitHub resolves
+# `github.workflow` inside a called workflow to this caller's name, and documents that
+# using the same group expression in both the caller and the called workflow can cancel
+# the caller, so the integration repository owns it.
+
+name: .NET CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+# One run of this workflow at a time, repo-wide. The release version is derived from
+# `git tag`, so two concurrent runs would race on both the version calculation and the
+# release creation.
+#
+# cancel-in-progress is false on purpose: cancelling mid-release leaves a release with a
+# partial asset set. Note the trade-off GitHub imposes -- while one run holds the group,
+# only the most recent queued run is kept and any run queued before it is cancelled, so
+# rapid-fire pushes can drop an intermediate rc build.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  dotnet-ci:
+    uses: Keyfactor/actions/.github/workflows/dotnet-ci.yml@v5
+    # with:
+    #   # Pin the manifest schema to one revision of keyfactor/github-meta instead of
+    #   # tracking main, so a schema change cannot start failing this repo's builds.
+    #   schema_ref: v0.1.0
+    #   # Override the SDKs installed for this repo.
+    #   dotnet_version: |
+    #     8.0.x
+    secrets:
+      token: ${{ secrets.V2BUILDTOKEN }}

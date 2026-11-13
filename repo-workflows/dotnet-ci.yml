@@ -1,0 +1,760 @@
+# Reusable .NET CI / release workflow for Keyfactor integration repositories.
+#
+# This is the C# pull_request path from .github/workflows/starter.yml, rebuilt as five
+# jobs that run entirely on Linux with PowerShell 7. It replaces, for C# repos:
+#   starter.yml -> assign-env-from-json.yml
+#               -> github-release.yml -> check-todos-license-headers.yml
+#               -> dotnet-build-and-release.yml
+#               -> generate-readme.yml
+#               -> kf-post-release.yml
+#
+# Every `run:` block is pwsh. Marketplace/Keyfactor actions are still used where they
+# already solve the problem (semver bump, release upload, PR creation) rather than being
+# reimplemented.
+#
+# CONCURRENCY IS THE CALLER'S JOB. GitHub resolves `github.workflow` inside a called
+# workflow to the *caller's* workflow name and documents that sharing a concurrency group
+# expression between caller and called workflow can cancel the caller, so the integration
+# repository declares the group. See examples/dotnet-ci-caller.yml.
+
+name: .NET CI
+
+on:
+  workflow_call:
+    inputs:
+      schema_ref:
+        description: >-
+          Ref of keyfactor/github-meta to validate integration-manifest.json against.
+          Defaults to main, so a schema change takes effect across all integrations on the
+          next run; set it to a tag or commit SHA to pin a repository to one schema
+          revision.
+        type: string
+        required: false
+        default: main
+      dotnet_version:
+        description: 'Newline-separated dotnet SDK versions to install.'
+        type: string
+        required: false
+        # 3.1.x is deliberately absent: the .NET Core 3.1 SDK cannot be installed on
+        # ubuntu-24.04 (it needs libssl1.1), so including it fails the whole job.
+        default: |
+          6.0.x
+          8.0.x
+          10.0.x
+    secrets:
+      token:
+        description: 'Token with access to private packages, doctool and the codesigning dispatch'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 1 ---------------------------------------------------------------------------------
+  # Is integration-manifest.json actually valid? Gates everything else so a malformed
+  # manifest fails in one obvious place rather than halfway through a build.
+  validate:
+    name: Validate manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration repository
+        uses: actions/checkout@v4
+
+      # The schema's own repository, checked out directly. Keyfactor/actions carries it as
+      # the `meta` submodule, but going through that would mean cloning two repositories
+      # and initializing a submodule to read one file. Both resolve to the same commit.
+      - name: Checkout manifest schema
+        uses: actions/checkout@v4
+        with:
+          repository: keyfactor/github-meta
+          ref: ${{ inputs.schema_ref }}
+          path: .keyfactor-meta
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate against the manifest schema
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          # Strict mode makes a missing property an error, so read through PSObject.
+          function Get-Prop {
+            param($Object, [string]$Name)
+            $property = $Object.PSObject.Properties[$Name]
+            if ($null -eq $property) { return $null }
+            return $property.Value
+          }
+
+          # Manifests are authored against the Windows runners, so a path may arrive with
+          # backslashes, mixed separators or doubled separators. Splitting on both and
+          # rejoining through Path.Combine yields a real path for whatever platform this
+          # runs on, instead of a filename that happens to contain backslashes. Manifest
+          # paths are repository-relative by definition, so a leading separator is dropped.
+          function ConvertTo-NativePath {
+            param([string]$Path)
+            if ([string]::IsNullOrWhiteSpace($Path)) { return '' }
+            $segments = @($Path -split '[\\/]+' | Where-Object { $_ -ne '' })
+            if ($segments.Count -eq 0) { return '' }
+            return [System.IO.Path]::Combine([string[]]$segments)
+          }
+
+          $manifestPath = Join-Path $env:GITHUB_WORKSPACE 'integration-manifest.json'
+          $schemaPath = Join-Path $env:GITHUB_WORKSPACE '.keyfactor-meta/integration-manifest-schema.json'
+
+          foreach ($required in @($manifestPath, $schemaPath)) {
+            if (-not (Test-Path -LiteralPath $required)) {
+              Write-Error "Expected file not found: $required"
+            }
+          }
+
+          $raw = Get-Content -LiteralPath $manifestPath -Raw
+          $summary = [System.Collections.Generic.List[string]]::new()
+          $summary.Add('### Manifest validation')
+
+          # Test-Json carries Newtonsoft's schema validator, which handles this draft
+          # 2020-12 schema ($defs, $ref, allOf/if-then) and reports every violation
+          # rather than stopping at the first.
+          $schemaErrors = $null
+          $schemaValid = $raw |
+            Test-Json -SchemaFile $schemaPath -ErrorAction SilentlyContinue -ErrorVariable schemaErrors
+
+          if ($schemaValid) {
+            $summary.Add('* schema &colon; valid')
+          } else {
+            $messages = @($schemaErrors | ForEach-Object {
+              ($_.Exception.Message -replace '^The JSON is not valid with the schema: ', '') -replace '\\u0022', '"'
+            })
+
+            # Messages of the form: Expected "orchestrator" at '/integration_type'
+            # are the schema's allOf/if-then machinery reporting which conditional branch
+            # did not apply, not the actual fault, and they crowd out the real cause. A
+            # genuinely wrong integration_type reports an enum violation instead, so these
+            # can be demoted without hiding anything.
+            $branchPattern = "^Expected .+ at '/integration_type'$"
+            $primary = @($messages | Where-Object { $_ -notmatch $branchPattern })
+            $branchNotes = @($messages | Where-Object { $_ -match $branchPattern })
+            if ($primary.Count -eq 0) { $primary = $messages; $branchNotes = @() }
+
+            $summary.Add("* schema &colon; **$($messages.Count) error(s)**")
+            foreach ($message in $primary) {
+              $summary.Add("  * $message")
+              Write-Host "::error file=integration-manifest.json::$message"
+            }
+            if ($branchNotes.Count -gt 0) {
+              $summary.Add("  * _plus $($branchNotes.Count) conditional-branch message(s); see the job log._")
+              foreach ($message in $branchNotes) { Write-Host "branch: $message" }
+            }
+          }
+
+          # Be selective: only the handful of properties this workflow actually consumes.
+          # release_dir and release_project are NOT in the schema's `required` list, so a
+          # manifest can be schema-valid and still impossible to build.
+          $manifest = $raw | ConvertFrom-Json
+          $problems = [System.Collections.Generic.List[string]]::new()
+
+          foreach ($name in @('release_dir', 'release_project')) {
+            if ([string]::IsNullOrWhiteSpace((Get-Prop $manifest $name))) {
+              $problems.Add("'$name' is needed to build and package a release, but is missing or empty. The schema does not require it, so this is checked here.")
+            }
+          }
+
+          $releaseProject = Get-Prop $manifest 'release_project'
+          if (-not [string]::IsNullOrWhiteSpace($releaseProject)) {
+            $normalized = ConvertTo-NativePath $releaseProject
+            if (-not (Test-Path -LiteralPath $normalized)) {
+              $problems.Add("release_project '$normalized' does not exist in the repository.")
+            }
+          }
+
+          if ($problems.Count -eq 0) {
+            $summary.Add('* build properties &colon; valid')
+          } else {
+            $summary.Add('* build properties &colon; **invalid**')
+            foreach ($problem in $problems) {
+              $summary.Add("  * $problem")
+              Write-Host "::error file=integration-manifest.json::$problem"
+            }
+          }
+
+          $summary | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+          if (-not $schemaValid -or $problems.Count -gt 0) {
+            Write-Error 'integration-manifest.json failed validation.'
+          }
+
+  # 2 ---------------------------------------------------------------------------------
+  # Everything the later jobs need to know: which project to build, what version this is,
+  # and whether this run is a release-candidate or the real thing.
+  setup:
+    name: Setup environment
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      repo_name: ${{ steps.manifest.outputs.repo_name }}
+      release_dir: ${{ steps.manifest.outputs.release_dir }}
+      release_project: ${{ steps.manifest.outputs.release_project }}
+      release_version: ${{ steps.version.outputs.release_version }}
+      create_release: ${{ steps.context.outputs.create_release }}
+      is_pre_release: ${{ steps.context.outputs.is_pre_release }}
+      is_full_release: ${{ steps.context.outputs.is_full_release }}
+      is_hotfix: ${{ steps.tag.outputs.is_hotfix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the version calculation can see every tag.
+          fetch-depth: 0
+
+      - name: Read build properties from manifest
+        id: manifest
+        shell: pwsh
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          function Get-Prop {
+            param($Object, [string]$Name)
+            $property = $Object.PSObject.Properties[$Name]
+            if ($null -eq $property) { return $null }
+            return $property.Value
+          }
+
+          # Manifests are authored against the Windows runners, so a path may arrive with
+          # backslashes, mixed separators or doubled separators. Splitting on both and
+          # rejoining through Path.Combine yields a real path for whatever platform this
+          # runs on, instead of a filename that happens to contain backslashes. Manifest
+          # paths are repository-relative by definition, so a leading separator is dropped.
+          function ConvertTo-NativePath {
+            param([string]$Path)
+            if ([string]::IsNullOrWhiteSpace($Path)) { return '' }
+            $segments = @($Path -split '[\\/]+' | Where-Object { $_ -ne '' })
+            if ($segments.Count -eq 0) { return '' }
+            return [System.IO.Path]::Combine([string[]]$segments)
+          }
+
+          $manifest = Get-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'integration-manifest.json') -Raw |
+            ConvertFrom-Json
+
+          # Only the properties this workflow consumes; the rest of the manifest is the
+          # catalog's and doctool's business.
+          $values = [ordered]@{
+            repo_name        = $env:REPO_NAME
+            name             = [string](Get-Prop $manifest 'name')
+            integration_type = [string](Get-Prop $manifest 'integration_type')
+            release_dir      = ConvertTo-NativePath ([string](Get-Prop $manifest 'release_dir'))
+            release_project  = ConvertTo-NativePath ([string](Get-Prop $manifest 'release_project'))
+          }
+
+          foreach ($entry in $values.GetEnumerator()) {
+            # Each of these is consumed as a single line; a newline would otherwise append
+            # arbitrary extra step outputs.
+            if ($entry.Value -match '[\r\n]') {
+              Write-Error "Manifest property '$($entry.Key)' must not contain a line break."
+            }
+            "$($entry.Key)=$($entry.Value)" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          }
+
+          @(
+            '### Build properties'
+            "* integration_type &colon; $($values.integration_type)"
+            "* release_dir &colon; $($values.release_dir)"
+            "* release_project &colon; $($values.release_project)"
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Resolve release context
+        id: context
+        shell: pwsh
+        # Event data arrives through env rather than inline ${{ }} so a branch name cannot
+        # be interpolated into the script body.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $baseRef = [string]$env:PR_BASE_REF
+          $isReleaseBranch = $baseRef.StartsWith('release-')
+          $baseTag = $baseRef -replace '^release-', ''
+
+          $isPreRelease = $false
+          $isFullRelease = $false
+          $incLevel = ''
+
+          # Carried over from github-release.yml: a merged, closed PR only counts as the
+          # full release when the merge commit is the commit this run was triggered for.
+          if ($env:PR_STATE -eq 'closed' -and $env:PR_MERGED -eq 'true' -and
+              $env:PR_MERGE_COMMIT_SHA -eq $env:HEAD_SHA) {
+            $isFullRelease = $true
+            $incLevel = 'patch'
+          }
+          if ($env:PR_STATE -eq 'open') {
+            $isPreRelease = $true
+            $incLevel = 'prerelease'
+          }
+
+          # A release is only cut for a pull request into a release-* branch. Anything else
+          # (a PR into main, a manual run) is a build-only validation run.
+          $createRelease = ($env:EVENT_NAME -eq 'pull_request') -and $isReleaseBranch -and $incLevel
+
+          $outputs = [ordered]@{
+            pr_base_tag       = $baseTag
+            is_release_branch = "$isReleaseBranch"
+            is_pre_release    = "$isPreRelease"
+            is_full_release   = "$isFullRelease"
+            inc_level         = $incLevel
+            create_release    = "$([bool]$createRelease)"
+          }
+          foreach ($entry in $outputs.GetEnumerator()) {
+            "$($entry.Key)=$($entry.Value)" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          }
+
+          @(
+            '### Release context'
+            "* base ref &colon; $(if ($baseRef) { $baseRef } else { 'n/a' })"
+            "* release branch &colon; $isReleaseBranch"
+            "* pre-release &colon; $isPreRelease"
+            "* full release &colon; $isFullRelease"
+            "* create release &colon; $([bool]$createRelease)"
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Find latest tag
+        id: tag
+        if: steps.context.outputs.create_release == 'True'
+        shell: pwsh
+        env:
+          PR_BASE_TAG: ${{ steps.context.outputs.pr_base_tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          git fetch --tags --force
+
+          $tags = @(git tag --sort=-v:refname)
+          $latestTag = ''
+          $isHotfix = $false
+
+          if ($tags.Count -gt 0) {
+            # Escaped so that base tag 5.2 does not also match 512.0.0.
+            $basePattern = '^' + [regex]::Escape($env:PR_BASE_TAG)
+            $branchTags = @($tags | Where-Object { $_ -match $basePattern })
+
+            if ($branchTags.Count -gt 0) {
+              $branchTagBase = [regex]::Match($branchTags[0], '^[0-9.]*').Value
+              $latestTagBase = [regex]::Match($tags[0], '^[0-9.]*').Value
+
+              # A bare MAJOR.MINOR.PATCH tag is a finished release; anything longer on the
+              # same base is one of the rc builds that led to it.
+              $released = $branchTags | Where-Object { $_ -eq $branchTagBase } | Select-Object -First 1
+              if ($released) {
+                $latestTag = $released
+              } else {
+                $latestTag = $branchTags |
+                  Where-Object { $_.StartsWith($branchTagBase) } |
+                  Select-Object -First 1
+              }
+
+              # If the newest tag in the repo is not on this release line, this build is a
+              # hotfix to an older line.
+              $isHotfix = -not $latestTagBase.EndsWith($branchTagBase)
+            }
+          } else {
+            Write-Host 'No tags exist in this repo'
+          }
+
+          "latest_tag=$latestTag" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          "is_hotfix=$isHotfix" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          Write-Host "latest_tag=$latestTag is_hotfix=$isHotfix"
+
+      - name: Bump semver
+        id: bump
+        if: steps.context.outputs.create_release == 'True' && steps.tag.outputs.latest_tag != ''
+        uses: keyfactor/action-bump-semver@v1
+        with:
+          current_version: ${{ steps.tag.outputs.latest_tag }}
+          level: ${{ steps.context.outputs.inc_level }}
+          preID: rc
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        env:
+          CREATE_RELEASE: ${{ steps.context.outputs.create_release }}
+          PR_BASE_TAG: ${{ steps.context.outputs.pr_base_tag }}
+          INC_LEVEL: ${{ steps.context.outputs.inc_level }}
+          LATEST_TAG: ${{ steps.tag.outputs.latest_tag }}
+          BUMPED_VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          if ($env:CREATE_RELEASE -ne 'True') {
+            # dotnet-build-and-release.yml's default for builds that are not released.
+            'release_version=1.0.0' | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+            return
+          }
+
+          if ($env:LATEST_TAG) {
+            $version = $env:BUMPED_VERSION
+          } elseif ($env:INC_LEVEL -eq 'prerelease') {
+            $version = "$($env:PR_BASE_TAG).0-rc.0"
+          } else {
+            # Differs from github-release.yml, which returns <base>.0-rc.0 here even for a
+            # full release. A finished release must not be tagged -rc.0: it would not be
+            # MAJOR.MINOR.PATCH, so the prerelease cleanup would also skip it.
+            $version = "$($env:PR_BASE_TAG).0"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Error 'Could not determine a release version.'
+          }
+
+          "release_version=$version" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          "Next version: $version" | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+  # 3 ---------------------------------------------------------------------------------
+  # Doctool regenerates README.md and pushes a commit to the PR branch, so it needs the
+  # head branch rather than the merge commit the build runs on, and cannot share a
+  # workspace with it. Separate also means a doctool failure does not fail the release.
+  docs:
+    name: Update documentation
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Only on a push to an open PR.
+    if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.head_ref != 'main'
+    steps:
+      - name: Checkout integration repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+          ref: ${{ github.head_ref }}
+
+      - name: Checkout doctool action
+        uses: actions/checkout@v4
+        with:
+          repository: keyfactor/doctooldotnet
+          path: doctooldotnet
+          token: ${{ secrets.token }}
+          clean: false
+
+      - name: Launch local doctool
+        uses: ./doctooldotnet
+        with:
+          token: ${{ secrets.token }}
+
+  # 4 ---------------------------------------------------------------------------------
+  # Build, and package the artifacts when this run is going to release them. Publishing
+  # is job 5's problem, so a build failure never leaves a half-populated release behind.
+  build:
+    name: Build integration
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dotnet
+        uses: keyfactor/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Restore
+        id: restore
+        shell: pwsh
+        env:
+          NUGET_USER: ${{ github.actor }}
+          NUGET_TOKEN: ${{ secrets.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $solutions = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter '*.sln' -File -Recurse)
+          if ($solutions.Count -eq 0) {
+            Write-Error 'No .sln file found in the repository.'
+          }
+          if ($solutions.Count -gt 1) {
+            Write-Error "Found $($solutions.Count) .sln files; expected exactly one: $($solutions.FullName -join ', ')"
+          }
+          $solutionPath = $solutions[0].FullName
+          Write-Host "Solution File Path: $solutionPath"
+          "solution_path=$solutionPath" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+
+          # Register the Keyfactor NuGet feed with credentials. If the source URL is
+          # already registered (e.g. via a repo nuget.config), find its name and update the
+          # credentials rather than failing.
+          # This one is allowed to fail, so it is the single place native errors are caught
+          # rather than thrown.
+          $addFailed = $false
+          try {
+            dotnet nuget add source 'https://nuget.pkg.github.com/Keyfactor/index.json' `
+              -n keyfactor -u $env:NUGET_USER -p $env:NUGET_TOKEN --store-password-in-clear-text
+          } catch {
+            $addFailed = $true
+            Write-Host "add source failed: $($_.Exception.Message)"
+          }
+          if ($addFailed) {
+            Write-Host 'Source already registered; finding name to update credentials...'
+            $sourceName = $null
+            $lines = dotnet nuget list source
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              if ($lines[$i] -match 'nuget\.pkg\.github\.com/Keyfactor') {
+                if ($lines[$i - 1] -match '^\s+\d+\.\s+(\S+)') { $sourceName = $Matches[1] }
+              }
+            }
+            if (-not $sourceName) {
+              Write-Error 'Could not locate Keyfactor NuGet source to update credentials.'
+            }
+            dotnet nuget update source $sourceName -u $env:NUGET_USER -p $env:NUGET_TOKEN --store-password-in-clear-text
+          }
+
+          dotnet restore $solutionPath
+
+      - name: Stamp AssemblyInfo version
+        if: needs.setup.outputs.create_release == 'True'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $assemblyInfoFiles = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter 'AssemblyInfo.cs' -File -Recurse)
+          if ($assemblyInfoFiles.Count -eq 0) {
+            Write-Host 'No AssemblyInfo.cs files found; nothing to stamp.'
+            return
+          }
+
+          $newVersion = $env:RELEASE_VERSION.TrimStart('v').Split('-')[0]
+          Write-Host "Prepared to overwrite Assembly version to: $newVersion"
+          foreach ($file in $assemblyInfoFiles) {
+            # `attrib -r` has no Linux equivalent; clear the flag through the file object.
+            if ($file.IsReadOnly) { $file.IsReadOnly = $false }
+            (Get-Content -LiteralPath $file.FullName) -replace '\d+\.\d+\.\d+', $newVersion |
+              Set-Content -LiteralPath $file.FullName
+          }
+
+      - name: Build
+        shell: pwsh
+        env:
+          SOLUTION_PATH: ${{ steps.restore.outputs.solution_path }}
+          RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $newVersion = $env:RELEASE_VERSION.TrimStart('v').Split('-')[0]
+          dotnet build $env:SOLUTION_PATH --no-restore -c Release -p:Version=$newVersion
+
+      - name: Package release artifacts
+        id: package
+        if: needs.setup.outputs.create_release == 'True'
+        shell: pwsh
+        env:
+          RELEASE_DIR: ${{ needs.setup.outputs.release_dir }}
+          RELEASE_PROJECT: ${{ needs.setup.outputs.release_project }}
+          RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+          REPO_NAME: ${{ needs.setup.outputs.repo_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          # XPath rather than property access: csproj files are namespace-free but strict
+          # mode turns a missing element property into a terminating error.
+          $csproj = [xml](Get-Content -LiteralPath $env:RELEASE_PROJECT -Raw)
+          $node = $csproj.SelectSingleNode('//PropertyGroup/TargetFrameworks')
+          if ($null -eq $node) { $node = $csproj.SelectSingleNode('//PropertyGroup/TargetFramework') }
+          if ($null -eq $node) {
+            Write-Error "Could not read TargetFramework(s) from '$($env:RELEASE_PROJECT)'."
+          }
+
+          $platforms = @($node.InnerText.Split(';') |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ })
+          Write-Host "release_platforms: $($platforms -join ', ')"
+
+          $outputDir = Join-Path $env:GITHUB_WORKSPACE 'zip/Keyfactor'
+          if (Test-Path -LiteralPath $outputDir) { Remove-Item -Recurse -Force -LiteralPath $outputDir }
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+
+          foreach ($platform in $platforms) {
+            $sourcePath = Join-Path $env:GITHUB_WORKSPACE (Join-Path $env:RELEASE_DIR $platform)
+            if (-not (Test-Path -LiteralPath $sourcePath)) {
+              Write-Error "Build output '$sourcePath' not found. Check release_dir in integration-manifest.json."
+            }
+            $zipPath = Join-Path $outputDir "$($env:REPO_NAME)_$($env:RELEASE_VERSION)_$platform.zip"
+            Get-ChildItem -File -Path $sourcePath | Select-Object -ExpandProperty Name
+            # The trailing /* packages the directory contents, matching the Windows build.
+            Compress-Archive -Path (Join-Path $sourcePath '*') -DestinationPath $zipPath -Force
+          }
+
+          @('### Packaged artifacts') +
+            @(Get-ChildItem -File -Path $outputDir | ForEach-Object { "* $($_.Name) ($([math]::Round($_.Length / 1KB)) KB)" }) |
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload release artifacts
+        if: needs.setup.outputs.create_release == 'True'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: zip/Keyfactor/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  # 5 ---------------------------------------------------------------------------------
+  # Publish: an rc prerelease while the PR is open, the real release once it merges. The
+  # merge case also opens the PR back to main and sweeps the superseded rc builds.
+  release:
+    name: Push release
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: needs.setup.outputs.create_release == 'True'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth added: https://github.com/devops-infra/action-pull-request/issues/51
+          fetch-depth: 0
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-artifacts
+
+      # action-gh-release creates the release and tag when they do not already exist, so
+      # the release only ever appears once a build has succeeded.
+      - name: Push release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ github.repository }}
+          tag_name: ${{ needs.setup.outputs.release_version }}
+          name: ${{ needs.setup.outputs.release_version }}
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: ${{ needs.setup.outputs.is_pre_release == 'True' }}
+          # github-release.yml computes IS_HOTFIX and notes the intent was to set
+          # make_latest:false, which its release action did not support. This one does, so
+          # a hotfix to an older line no longer displaces the newest release.
+          make_latest: ${{ needs.setup.outputs.is_hotfix == 'True' && 'false' || 'true' }}
+          append_body: true
+          body: |
+            [Changelog](/./CHANGELOG.md)
+            [Readme](/./README.md)
+            For the latest README.md updates visit the [Main Page](/../main) for this repository
+          files: release-artifacts/*.zip
+          token: ${{ secrets.token }}
+
+      # Dispatches against the tag this run just produced rather than re-discovering it
+      # with `gh release list -L 1`, which could pick up another run's release.
+      - name: Dispatch codesigning
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          TAG: ${{ needs.setup.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          # The signer downloads every *.zip, so never run it on an already signed release.
+          $assets = @(gh release view $env:TAG --json assets --jq '.assets[].name')
+          if ($assets | Where-Object { $_ -like '*_signed.zip' }) {
+            Write-Host "Release $($env:TAG) already has signed assets, skipping"
+            return
+          }
+
+          Write-Host "Dispatching signing for $($env:TAG)"
+          gh workflow run new-sign.yml `
+            -R Keyfactor/integration-codesigning `
+            -f "targetRepo=$($env:REPO_NAME)" `
+            -f "targetTag=$($env:TAG)"
+
+      - name: Create PR to main
+        if: needs.setup.outputs.is_full_release == 'True'
+        uses: Keyfactor/action-pull-request@v0.5.5
+        with:
+          github_token: ${{ secrets.token }}
+          source_branch: ${{ github.event.pull_request.base.ref }}
+          target_branch: main
+          allow_no_diff: true
+          title: Merge ${{ needs.setup.outputs.release_version }} to main
+          body: "Merge ${{ github.event.pull_request.base.ref }} to main - Automated PR"
+
+      # Runs after the PR step so a cleanup failure cannot block the merge back to main.
+      # Deletes the rc builds superseded by this release; the git tags are left in place
+      # because the version calculation in `setup` reads them from `git tag` output.
+      - name: Remove superseded prereleases
+        if: needs.setup.outputs.is_full_release == 'True'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASED_VERSION: ${{ needs.setup.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          # Without a well-formed released version there is no basis for comparison, so
+          # delete nothing.
+          if ($env:RELEASED_VERSION -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Host "::warning::release_version '$($env:RELEASED_VERSION)' is not MAJOR.MINOR.PATCH; skipping prerelease cleanup."
+            return
+          }
+          $released = [version]$env:RELEASED_VERSION
+
+          $summary = [System.Collections.Generic.List[string]]::new()
+          $summary.Add("### Prerelease cleanup for $($env:RELEASED_VERSION)")
+
+          # Collected before the loop so a failed API call aborts the step instead of
+          # reading as "no prereleases found".
+          $prereleases = @(gh api --paginate "repos/$($env:GH_REPO)/releases" `
+            --jq '.[] | select(.prerelease) | .tag_name')
+
+          $deleted = 0
+          $failed = 0
+          foreach ($tag in $prereleases) {
+            # Only the bare semver rc builds produced by this workflow.
+            if ($tag -notmatch '^(\d+\.\d+\.\d+)-rc\.\d+$') { continue }
+            $candidate = [version]$Matches[1]
+
+            # A prerelease of the released version sorts below it, so -le sweeps the rc
+            # builds that led to this release plus every older line, while leaving an
+            # in-flight higher version (e.g. 5.0.0-rc.0 during a 4.0.1 hotfix) untouched.
+            if ($candidate -le $released) {
+              # Caught per tag so one failure is tallied and reported at the end rather
+              # than aborting the sweep partway through.
+              try {
+                gh release delete $tag --yes
+                $summary.Add("* deleted ``$tag``")
+                $deleted++
+              } catch {
+                Write-Host "::warning::failed to delete $tag"
+                $failed++
+              }
+            } else {
+              $summary.Add("* kept ``$tag`` (newer than $($env:RELEASED_VERSION))")
+            }
+          }
+
+          $summary.Add("Deleted $deleted prerelease(s), $failed failure(s).")
+          $summary | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+          if ($failed -gt 0) { Write-Error "$failed prerelease(s) could not be deleted." }
